@@ -22,6 +22,13 @@ def parse_args():
         version=f"%(prog)s {__version__}"
     )
 
+    # Interactive mode
+    parser.add_argument(
+        "--interactive", "-i",
+        action="store_true",
+        help="Launch interactive wizard mode"
+    )
+
     # Config file mode
     parser.add_argument(
         "--config", "-c",

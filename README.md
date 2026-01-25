@@ -136,6 +136,70 @@ print(f"Generated context: {len(markdown_content)} characters.")
 
 ---
 
+## 🧙‍♂️ Interactive Mode (New!)
+
+**Don't want to remember CLI arguments?** Use the interactive wizard!
+
+```bash
+code-assembler --interactive
+# or
+code-assembler -i
+```
+
+The wizard will guide you through:
+1. 📂 **Path selection** - Choose directories or specific files
+2. 📝 **Extension presets** - Python, JS/TS, Rust, Go, Java, C/C++, or custom
+3. 🚫 **Smart exclusions** - Use defaults or add custom patterns
+4. 💾 **Output config** - Name your file, auto-detect conflicts
+5. ⚙️ **Advanced options** - Truncation, recursion, README inclusion
+
+**Example session:**
+```
+🚀 Code Assembler Pro - Interactive Mode
+═════════════════════════════════════════════════════
+
+🎯 Step 1: Select Paths to Analyze
+──────────────────────────────────────────────────────
+You can analyze:
+  1. Current directory (.)
+  2. Specific directory/directories
+  3. Specific files
+
+Your choice [1-3]: 1
+✅ Selected: current directory
+
+🎯 Step 2: Select File Extensions
+──────────────────────────────────────────────────────
+Common presets:
+  1. Python projects (.py)
+  2. Python + Config + Docs (.py, .md, .toml, .yaml)
+  3. JavaScript/TypeScript (.js, .ts, .jsx, .tsx)
+  ...
+
+Your choice [1-8]: 2
+✅ Selected: Python + Config + Docs
+
+... [wizard continues]
+
+🎯 Configuration Summary
+──────────────────────────────────────────────────────
+📂 Paths: .
+📝 Extensions: .py, .md, .toml, .yaml
+💾 Output: codebase.md
+🔧 Recursive: True
+✂️  Truncate large files: True (keep first 500 lines)
+
+🚀 Start assembly? [Y/n]: y
+
+💾 Save this configuration for future use? [y/N]: y
+✅ Configuration saved to: assembler_config.json
+   Reuse it with: code-assembler --config assembler_config.json
+```
+
+👉 **[Full Interactive Mode Guide](INTERACTIVE_MODE.md)**
+
+---
+
 ## 💡 Recommended Use Cases
 
 ### 1. Onboarding & Audit
