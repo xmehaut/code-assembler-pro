@@ -2,9 +2,11 @@
 
 > **Turn your codebase into structured, LLM-ready context with one command.**
 
-![Version](https://img.shields.io/badge/version-4.1.0-blue)
+![Version](https://img.shields.io/badge/version-4.2.1-blue)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+[![PyPI version](https://badge.fury.io/py/code-assembler-pro.svg)](https://badge.fury.io/py/code-assembler-pro)
+
 
 **Code Assembler Pro** is a high-grade engineering utility designed to bridge the gap between your source code and Large Language Models (Claude 3.5, GPT-4o, Gemini 1.5). 
 
