@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "code-assembler-pro"
+version = "4.1.0"
+description = "Consolidate your codebase into structured Markdown context for LLMs (Claude, GPT, Gemini)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Xavier Mehaut", email = "xavier.mehaut@gmail.com"}
+]
+keywords = ["llm", "context", "codebase", "markdown", "ai-engineering", "prompt-engineering"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Documentation",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "chardet>=5.0.0",
+    "jinja2>=3.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/code-assembler-pro"
+Issues = "https://github.com/yourusername/code-assembler-pro/issues"
+
+[project.scripts]
+# This creates the 'code-assembler' command in the terminal after installation
+code-assembler = "code_assembler.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+# Crucial: This ensures your .j2 templates are included in the pip package
+code_assembler = ["templates/*.j2", "templates/components/*.j2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
