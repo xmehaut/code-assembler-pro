@@ -1,0 +1,5 @@
+## {{ emoji.map }} Table of Contents
+
+{% for entry in entries %}
+{{ "  " * entry.depth }}- {{ emoji.folder if entry.is_directory else emoji.file }} [{{ entry.name }}](#{{ entry.anchor }}){% if entry.is_file %} ({{ entry.size }}, {{ entry.lines }} lines){% endif %}
+{% endfor %}

@@ -1,0 +1,100 @@
+# {{ emoji.memo }} Consolidated Codebase - LLM Documentation
+
+> **Generated on:** {{ now }}  
+> **Tool:** Code Assembler Pro v{{ version }}  
+> **Purpose:** Comprehensive codebase view for LLM analysis
+
+---
+
+{{ toc }}
+
+---
+
+{{ architecture }}
+
+---
+
+## {{ emoji.target }} Purpose of this Document
+
+This file consolidates **{{ total_files }} files** into a structured Markdown document, 
+optimized for analysis by Large Language Models (Claude, GPT, Gemini, DeepSeek, etc.).
+
+**Recommended Use Cases:**
+- {{ emoji.book }} **Code Analysis** - Understand architecture and logic
+- {{ emoji.bug }} **Debugging** - Identify cross-file bugs
+- {{ emoji.memo }} **Code Review** - Deep dive into the codebase
+- {{ emoji.book }} **Documentation** - Auto-generate technical documentation
+- {{ emoji.recycle }} **Refactoring** - Propose structural improvements
+- {{ emoji.bulb }} **Questions** - Answer specific questions about the code
+
+---
+
+{{ stats_table }}
+
+## {{ emoji.bulb }} Recommended Prompts
+
+### {{ emoji.mag }} General Analysis
+```
+Analyze this codebase and provide:
+1. Global architecture (component diagram)
+2. Identified design patterns
+3. Complete technical stack
+4. Priority improvement points
+5. Missing documentation
+```
+
+### {{ emoji.bug }} Assisted Debugging
+```
+I have this bug: [describe symptom]
+
+By analyzing the code:
+1. Identify potentially involved files
+2. Explain the probable cause with line references
+3. Propose a fix with a diff
+4. Suggest regression tests
+```
+
+### {{ emoji.book }} Documentation Generation
+```
+Generate comprehensive documentation:
+1. README.md (overview, installation, quickstart)
+2. ARCHITECTURE.md (components, data flow)
+3. API.md (public interface documentation)
+4. CONTRIBUTING.md (guide for contributors)
+```
+
+### {{ emoji.recycle }} Strategic Refactoring
+```
+Analyze the code and propose:
+1. Refactorings to improve maintainability
+2. Performance optimizations (bottlenecks)
+3. Modular reorganization if necessary
+4. Migration to modern patterns
+5. Technical debt reduction
+```
+
+### {{ emoji.test }} Testing Strategy
+```
+Evaluate test coverage:
+1. Critical functions not tested
+2. Detected code smells
+3. Suggestions for unit tests (with examples)
+4. Continuous integration strategy
+```
+
+---
+
+## {{ emoji.warning }} Limitations
+
+- **LLM Context:** ~{{ estimated_tokens }} tokens (check your model limits)
+- **Snapshot Time:** State as of {{ now_short }}
+- **Excluded Files:** {{ skipped_count }} file(s) ignored
+- **Dynamic Code:** Runtime behaviors not captured (DB, env vars, etc.)
+
+---
+
+## {{ emoji.rocket }} Ready for Analysis
+
+The {{ total_files }} files of your codebase follow below. {{ emoji.file }}
+
+---
