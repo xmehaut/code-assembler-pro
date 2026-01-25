@@ -15,10 +15,16 @@ authors = [
 keywords = ["llm", "context", "codebase", "markdown", "ai-engineering", "prompt-engineering"]
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Documentation",
+    "Topic :: Text Processing :: Markup :: Markdown",
     "Intended Audience :: Developers",
+    "Development Status :: 5 - Production/Stable",
 ]
 dependencies = [
     "chardet>=5.0.0",
@@ -26,8 +32,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/code-assembler-pro"
-Issues = "https://github.com/yourusername/code-assembler-pro/issues"
+Homepage = "https://github.com/xmehaut/code-assembler-pro"
+Documentation = "https://github.com/xmehaut/code-assembler-pro#readme"
+Repository = "https://github.com/xmehaut/code-assembler-pro"
+Issues = "https://github.com/xmehaut/code-assembler-pro/issues"
+Changelog = "https://github.com/xmehaut/code-assembler-pro/blob/main/CHANGELOG.md"
 
 [project.scripts]
 # This creates the 'code-assembler' command in the terminal after installation
