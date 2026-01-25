@@ -10,7 +10,7 @@ from typing import Dict
 # In code_assembler/constants.py
 
 # Version
-__version__ = "4.2.0"  # Changed from 4.1.0
+__version__ = "4.2.1"  # Changed from 4.1.0
 
 # Language mapping for syntax highlighting
 LANGUAGE_MAP: Dict[str, str] = {

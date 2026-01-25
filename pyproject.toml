@@ -1,31 +1,32 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "code-assembler-pro"
-version = "4.2.0"
+version = "4.2.1"
 description = "Consolidate your codebase into structured Markdown context for LLMs (Claude, GPT, Gemini)."
 readme = "README.md"
 requires-python = ">=3.9"
+
+# On revient au format "table" pour forcer la compatibilité Metadata 2.1
 license = {text = "MIT"}
+
 authors = [
     {name = "Xavier Mehaut", email = "xavier.mehaut@gmail.com"}
 ]
 keywords = ["llm", "context", "codebase", "markdown", "ai-engineering", "prompt-engineering"]
+
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: MIT License",
+    # SUPPRIMÉ : "License :: OSI Approved :: MIT License" (déprécié ici)
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Documentation",
     "Topic :: Text Processing :: Markup :: Markdown",
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
 ]
+
 dependencies = [
     "chardet>=5.0.0",
     "jinja2>=3.1.0",
@@ -44,12 +45,14 @@ code-assembler = "code_assembler.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+# On désactive la détection automatique des fichiers de licence
+# pour éviter que setuptools n'ajoute le champ 'license-file' qui bugue
+license-files = []
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-# Crucial: This ensures your .j2 templates are included in the pip package
 code_assembler = ["templates/*.j2", "templates/components/*.j2"]
 
 [tool.pytest.ini_options]
