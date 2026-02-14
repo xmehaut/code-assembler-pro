@@ -42,6 +42,9 @@ class AssemblerConfig:
     show_progress: bool = True
     use_default_excludes: bool = True
 
+    # Exact filenames to match (e.g. Dockerfile, Makefile, .env)
+    exact_filenames: List[str] = field(default_factory=list)
+
     def __post_init__(self):
         """Validate and normalize configuration after initialization."""
         if not self.paths:
@@ -50,11 +53,25 @@ class AssemblerConfig:
         if not self.extensions:
             raise ValueError("At least one extension must be specified")
 
-        # Normalize extensions to include leading dot
-        self.extensions = [
-            ext if ext.startswith('.') else f'.{ext}'
-            for ext in self.extensions
-        ]
+        # Separate exact filenames from extensions
+        # An exact filename has no dot, or starts with a dot (like .env)
+        normalized_ext = []
+        for ext in self.extensions:
+            bare = ext.lstrip('.')
+            # Exact filenames: no dot in the bare name (Dockerfile, Makefile)
+            # or the original was already a dotfile (.env, .gitignore)
+            if '.' not in bare and not ext.startswith('.'):
+                # e.g. "Dockerfile", "Makefile" → exact filename
+                self.exact_filenames.append(ext)
+            elif ext.startswith('.') and '.' not in ext[1:]:
+                # e.g. ".env", ".py" → could be extension OR dotfile
+                # Keep as extension (covers both cases via endswith)
+                normalized_ext.append(ext if ext.startswith('.') else f'.{ext}')
+            else:
+                # e.g. ".env.j2", "py" → normalize as extension
+                normalized_ext.append(ext if ext.startswith('.') else f'.{ext}')
+
+        self.extensions = normalized_ext
 
         # Add default excludes if requested
         if self.use_default_excludes:

@@ -35,6 +35,17 @@ class CodebaseAssembler:
         self.content_buffer: List[str] = []
         self.formatter = MarkdownFormatter()
 
+    def _matches_file(self, filepath: Path) -> bool:
+        """Check if a file matches configured extensions or exact filenames."""
+        name = filepath.name if isinstance(filepath, Path) else Path(filepath).name
+        # Match by extension (.py, .md, .env.j2, etc.)
+        if any(name.endswith(ext) for ext in self.config.extensions):
+            return True
+        # Match by exact filename (Dockerfile, Makefile, etc.)
+        if name in self.config.exact_filenames:
+            return True
+        return False
+
     def process_file(self, file_path: str, depth: int = 0) -> bool:
         """
         Process a single file and add its content to the buffer.
@@ -152,7 +163,7 @@ class CodebaseAssembler:
                     continue
 
                 if item.is_file():
-                    if any(item.name.endswith(ext) for ext in self.config.extensions):
+                    if self._matches_file(item):
                         self.process_file(str(item), depth)
 
                 elif item.is_dir():
@@ -191,7 +202,7 @@ class CodebaseAssembler:
                 print(f"\n{EMOJI['folder']} Processing: {path}")
 
             if os.path.isfile(path):
-                if any(path.endswith(ext) for ext in self.config.extensions):
+                if self._matches_file(Path(path)):
                     self.process_file(path)
             elif os.path.isdir(path):
                 self.process_directory(path)

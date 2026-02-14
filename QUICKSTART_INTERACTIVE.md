@@ -1,4 +1,4 @@
-# 🚀 Interactive Mode - 5-Minute Quickstart
+# 🚀 Interactive Mode — 5-Minute Quickstart
 
 Get started with Code Assembler Pro's interactive wizard in under 5 minutes!
 
@@ -32,6 +32,7 @@ Your choice [1-8]: 2
 - **Option 1**: Pure Python projects
 - **Option 2**: Python with docs/config (most common)
 - **Option 3**: JavaScript/TypeScript projects
+- **Option 8**: Custom — include `Dockerfile`, `.env`, etc.
 
 ---
 
@@ -41,14 +42,14 @@ Your choice [1-8]: 2
 Use default exclusions? [Y/n]: y
 Add custom exclusion patterns? [y/N]: n
 ```
-**Tip:** Always accept defaults unless you need something specific.
+**Tip:** Always accept defaults unless you need something specific. Use `code-assembler --show-excludes` to see what's excluded by default.
 
 ---
 
 ### 💾 Name Your Output
 
 ```
-Output filename [default: codebase.md]: 
+Output filename [default: codebase.md]:
 ```
 **Tip:** Press Enter to use the default name.
 
@@ -66,7 +67,7 @@ Configure advanced options? [y/N]: n
 ## Step 3: Confirm & Run
 
 ```
-🚀 Start assembly? [Y/n]: y
+[>>] Start assembly? [Y/n]: y
 ```
 
 That's it! Your `codebase.md` is ready to share with an LLM.
@@ -78,7 +79,7 @@ That's it! Your `codebase.md` is ready to share with an LLM.
 ```
 codebase.md (Ready for Claude/GPT!)
 ├── 📋 Header (timestamp, stats, TOC)
-├── 🏛️ Architecture Analysis
+├── 🏛 Architecture Analysis
 ├── 📊 Statistics Table
 ├── 💬 Recommended Prompts
 └── 📄 Full Source Code (organized by folder)
@@ -105,12 +106,17 @@ Then paste into your LLM chat!
 ### Save Your Configuration
 When prompted:
 ```
-💾 Save this configuration for future use? [y/N]: y
+[S] Save this configuration for future use? [y/N]: y
+```
+
+Or save directly from the CLI:
+```bash
+code-assembler . --ext py md --save-config my_config.json
 ```
 
 Reuse it later:
 ```bash
-code-assembler --config assembler_config.json
+code-assembler --config my_config.json
 ```
 
 ---
@@ -123,13 +129,19 @@ Test on a small project first to understand the output format.
 ### 2. Use Presets
 The extension presets (Step 2) are tailored for common project types.
 
-### 3. Check Token Count
+### 3. Include Infrastructure Files
+For DevOps/MLOps projects, use custom selection (option 8) and add:
+```
+Extensions: .py .yml .sh Dockerfile Makefile .env.j2
+```
+
+### 4. Check Token Count
 Look at the **Estimated Tokens** in the stats. Most LLMs have limits:
 - GPT-4o: 128,000 tokens
-- Claude 3.5 Sonnet: 200,000 tokens
+- Claude 3.5 / 4: 200,000 tokens
 - Gemini 1.5 Pro: 1,000,000 tokens
 
-### 4. Truncate Large Files
+### 5. Truncate Large Files
 If your project has huge files (>1000 lines), enable truncation:
 ```
 Truncate large files instead of skipping? [Y/n]: y
@@ -137,6 +149,11 @@ Keep first N lines when truncating [default: 500]: 300
 ```
 
 This keeps imports and key definitions while reducing token usage.
+
+### 6. See What's Excluded
+```bash
+code-assembler --show-excludes
+```
 
 ---
 
@@ -152,7 +169,10 @@ A: Press `Ctrl+C` to cancel and start over. No harm done!
 A: Yes! Save your config and use: `code-assembler --config your_config.json`
 
 **Q: Does it work on Windows?**
-A: Absolutely! The wizard is cross-platform.
+A: Absolutely! The wizard is cross-platform. On legacy PowerShell, emoji are replaced with ASCII markers.
+
+**Q: How do I include `Dockerfile` or `Makefile`?**
+A: Just add them as-is: `--ext py md Dockerfile Makefile`. They're matched by exact filename.
 
 ---
 
@@ -161,6 +181,7 @@ A: Absolutely! The wizard is cross-platform.
 - **Full Guide:** [INTERACTIVE_MODE.md](INTERACTIVE_MODE.md)
 - **CLI Reference:** [README.md](README.md)
 - **Examples:** [examples/](examples/)
+- **Changelog:** [CHANGELOG.md](CHANGELOG.md)
 
 ---
 

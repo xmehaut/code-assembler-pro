@@ -3,12 +3,13 @@ Command Line Interface for Code Assembler Pro.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import List
 
 from .core import assemble_codebase, assemble_from_config
-from .constants import __version__, DEFAULT_MAX_FILE_SIZE_MB
+from .constants import __version__, DEFAULT_MAX_FILE_SIZE_MB, DEFAULT_EXCLUDE_PATTERNS, EMOJI
 
 
 def parse_args():
@@ -36,6 +37,20 @@ def parse_args():
         help="Path to a JSON configuration file"
     )
 
+    # Utility flags
+    parser.add_argument(
+        "--show-excludes",
+        action="store_true",
+        help="Show default exclusion patterns and exit"
+    )
+
+    parser.add_argument(
+        "--save-config",
+        type=str,
+        metavar="FILE",
+        help="Save the CLI arguments as a reusable JSON config file"
+    )
+
     # Main arguments (used if --config is not present)
     parser.add_argument(
         "paths",
@@ -47,7 +62,7 @@ def parse_args():
         "--ext", "-e",
         dest="extensions",
         nargs="+",
-        help="Extensions to include (e.g., py md json)"
+        help="Extensions and filenames to include (e.g., py md json Dockerfile)"
     )
 
     parser.add_argument(
@@ -102,50 +117,92 @@ def parse_args():
     return parser.parse_args()
 
 
+def _show_excludes():
+    """Display default exclusion patterns."""
+    print(f"\n{EMOJI['target']} Default exclusion patterns ({len(DEFAULT_EXCLUDE_PATTERNS)}):\n")
+    for pattern in sorted(DEFAULT_EXCLUDE_PATTERNS):
+        print(f"  - {pattern}")
+    print(f"\nUse --no-default-excludes to disable these.")
+    print(f"Use --exclude / -x to add custom patterns on top.\n")
+
+
+def _save_config(args, extensions):
+    """Save CLI arguments as a JSON config file."""
+    config = {
+        "paths": args.paths,
+        "extensions": extensions,
+        "output": args.output,
+        "recursive": args.recursive,
+        "include_readmes": args.include_readmes,
+        "max_file_size_mb": args.max_size,
+        "use_default_excludes": args.use_default_excludes,
+    }
+    if args.exclude_patterns:
+        config["exclude_patterns"] = args.exclude_patterns
+
+    with open(args.save_config, 'w', encoding='utf-8') as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+
+    print(f"{EMOJI['success']} Configuration saved to: {args.save_config}")
+    print(f"   Reuse with: code-assembler --config {args.save_config}\n")
+
+
 def main():
     args = parse_args()
 
     try:
+        # Show excludes and exit
+        if args.show_excludes:
+            _show_excludes()
+            return
+
+        # Interactive mode
         if args.interactive:
-            # Interactive Wizard Mode
             from .interactive import run_interactive_mode
             run_interactive_mode()
             return
-        elif args.config:
-            # JSON Configuration Mode
+
+        # JSON Configuration Mode
+        if args.config:
             print(f"Loading configuration from: {args.config}")
             assemble_from_config(args.config)
-        else:
-            # CLI Arguments Mode
-            if not args.paths:
-                print("Error: No path specified.")
-                print("Usage: code-assembler path/to/code --ext py js")
-                sys.exit(1)
+            return
 
-            if not args.extensions:
-                print("Error: No extensions specified.")
-                print("Use --ext or -e (e.g., --ext py md)")
-                sys.exit(1)
+        # CLI Arguments Mode
+        if not args.paths:
+            print("Error: No path specified.")
+            print("Usage: code-assembler path/to/code --ext py js")
+            print("\nUseful options:")
+            print("  --interactive / -i     Launch the interactive wizard")
+            print("  --show-excludes        Show default exclusion patterns")
+            print("  --save-config FILE     Save current CLI args as JSON config")
+            sys.exit(1)
 
-            # Normalize extensions (add leading dot if missing)
-            extensions = [
-                e if e.startswith('.') else f'.{e}'
-                for e in args.extensions
-            ]
+        if not args.extensions:
+            print("Error: No extensions specified.")
+            print("Use --ext or -e (e.g., --ext py md Dockerfile)")
+            sys.exit(1)
 
-            assemble_codebase(
-                paths=args.paths,
-                extensions=extensions,
-                exclude_patterns=args.exclude_patterns,
-                output=args.output,
-                recursive=args.recursive,
-                include_readmes=args.include_readmes,
-                max_file_size_mb=args.max_size,
-                use_default_excludes=args.use_default_excludes
-            )
+        # Keep raw extensions (don't force dot prefix — config.py handles separation)
+        extensions = args.extensions
+
+        # Save config if requested
+        if args.save_config:
+            _save_config(args, extensions)
+
+        assemble_codebase(
+            paths=args.paths,
+            extensions=extensions,
+            exclude_patterns=args.exclude_patterns,
+            output=args.output,
+            recursive=args.recursive,
+            include_readmes=args.include_readmes,
+            max_file_size_mb=args.max_size,
+            use_default_excludes=args.use_default_excludes
+        )
 
     except Exception as e:
-        print(f"\nâŒ An error occurred: {str(e)}")
+        print(f"\n{EMOJI['error']} An error occurred: {str(e)}")
         sys.exit(1)
 
 

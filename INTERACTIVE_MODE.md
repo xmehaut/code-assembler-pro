@@ -70,8 +70,10 @@ Your choice [1-8]:
 
 **Custom selection example:**
 ```
-Extensions: .py .js .md .yaml
+Extensions: .py .js .md .yaml Dockerfile
 ```
+
+> **Tip (v4.3):** You can include exact filenames like `Dockerfile`, `Makefile`, `.env` alongside extensions. They will be matched by exact name.
 
 ---
 
@@ -89,11 +91,13 @@ Add custom exclusion patterns? [y/N]: y
 Enter patterns (one per line, empty line to finish):
 Examples: tests/, *.log, secret.py, temp_*
   Pattern: tests/
-  ✅ Added: tests/
+  [OK] Added: tests/
   Pattern: *.log
-  ✅ Added: *.log
-  Pattern: 
+  [OK] Added: *.log
+  Pattern:
 ```
+
+> **Tip:** Use `code-assembler --show-excludes` to see the full list of default exclusions.
 
 ---
 
@@ -121,7 +125,7 @@ Configure advanced options? [y/N]: y
 
   Recursively traverse subdirectories? [Y/n]: y
   Automatically include README files? [Y/n]: y
-  
+
   File size handling:
     Maximum file size (MB) [default: 10.0]: 5.0
     Truncate large files instead of skipping? [Y/n]: y
@@ -135,20 +139,19 @@ Configure advanced options? [y/N]: y
 Before executing, the wizard shows a complete summary:
 
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 Configuration Summary
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[*] Configuration Summary
+----------------------------------------------------------------------
 
-📂 Paths: ./src, ./docs
-📝 Extensions: .py, .md, .toml
-💾 Output: my_project.md
-🔧 Recursive: True
-📖 Include READMEs: True
-📏 Max file size: 5.0 MB
-✂️  Truncate large files: True
+[DIR] Paths: ./src, ./docs
+[FILE] Extensions: .py, .md, .toml
+[S] Output: my_project.md
+[R] Recursive: True
+[B] Include READMEs: True
+[?] Max file size: 5.0 MB
+[!] Truncate large files: True
    Keep first 300 lines
 
-🚫 Exclusions: 15 patterns
+[X] Exclusions: 15 patterns
    - __pycache__
    - .git
    - .venv
@@ -156,7 +159,7 @@ Before executing, the wizard shows a complete summary:
    - *.log
    ... and 10 more
 
-🚀 Start assembly? [Y/n]:
+[>>] Start assembly? [Y/n]:
 ```
 
 ---
@@ -166,9 +169,9 @@ Before executing, the wizard shows a complete summary:
 After review, you can save the configuration for future use:
 
 ```
-💾 Save this configuration for future use? [y/N]: y
+[S] Save this configuration for future use? [y/N]: y
 Configuration filename [default: assembler_config.json]: my_config.json
-✅ Configuration saved to: my_config.json
+[OK] Configuration saved to: my_config.json
    Reuse it with: code-assembler --config my_config.json
 ```
 
@@ -188,6 +191,11 @@ This creates a reusable JSON file:
 }
 ```
 
+> **New in v4.3:** You can also save CLI arguments directly with `--save-config`:
+> ```bash
+> code-assembler . --ext py md --exclude tests --save-config my_config.json
+> ```
+
 ---
 
 ## ⌨️ Keyboard Shortcuts
@@ -204,22 +212,24 @@ This creates a reusable JSON file:
 Use extension presets (Step 2) for common project types. They include sensible defaults.
 
 ### 2. Use Default Exclusions
-Always keep default exclusions enabled unless you have a specific reason not to. They filter out:
-- Build artifacts (`dist/`, `build/`)
-- Dependencies (`node_modules/`, `.venv/`)
-- Version control (`.git/`, `.svn/`)
-- IDE files (`.idea/`, `.vscode/`)
+Always keep default exclusions enabled unless you have a specific reason not to. They filter out build artifacts, dependencies, version control, and IDE files. Use `code-assembler --show-excludes` to see the full list.
 
-### 3. Test with Small Projects First
+### 3. Include Infrastructure Files
+For DevOps projects, use custom selection and add exact filenames:
+```
+Extensions: .py .yml .sh Dockerfile Makefile .env.j2
+```
+
+### 4. Test with Small Projects First
 Run the wizard on a small project to understand the output before tackling large codebases.
 
-### 4. Save Configurations
+### 5. Save Configurations
 For projects you analyze regularly, save the configuration to skip the wizard in the future:
 ```bash
 code-assembler --config my_saved_config.json
 ```
 
-### 5. Truncation for Large Codebases
+### 6. Truncation for Large Codebases
 For projects with many large files:
 - Enable truncation (default: Yes)
 - Set a reasonable line limit (300-500 lines)
@@ -264,6 +274,9 @@ ls -la
 
 ### Cancelled by accident
 No problem! Just run `code-assembler -i` again. The wizard has no side effects until you confirm the final step.
+
+### Emoji not displaying (Windows)
+On legacy PowerShell or cmd.exe, emoji are replaced with ASCII markers like `[OK]`, `[>>]`, `[DIR]`. This is normal. For full emoji support, use [Windows Terminal](https://aka.ms/terminal).
 
 ---
 
