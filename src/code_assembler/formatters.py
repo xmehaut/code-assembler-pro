@@ -71,9 +71,8 @@ class MarkdownFormatter:
     def format_directory_header(self, dir_path: str, depth: int = 0) -> str:
         """Format a directory header."""
         header_level = "#" * (1 + depth)
-        anchor = slugify_path(dir_path)
         dirname = Path(dir_path).name
-        return f'{header_level} {EMOJI["folder"]} {dirname}<a name="{anchor}"></a>\n\n'
+        return f'{header_level} `{dirname}/`\n\n'
 
     def format_readme_context(self, readme_content: str, depth: int = 0) -> str:
         """Format README content using the readme_context template."""

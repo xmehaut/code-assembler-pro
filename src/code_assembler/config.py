@@ -49,27 +49,24 @@ class AssemblerConfig:
         """Validate and normalize configuration after initialization."""
         if not self.paths:
             raise ValueError("At least one path must be specified")
-
         if not self.extensions:
             raise ValueError("At least one extension must be specified")
 
         # Separate exact filenames from extensions
-        # An exact filename has no dot, or starts with a dot (like .env)
         normalized_ext = []
         for ext in self.extensions:
-            bare = ext.lstrip('.')
-            # Exact filenames: no dot in the bare name (Dockerfile, Makefile)
-            # or the original was already a dotfile (.env, .gitignore)
-            if '.' not in bare and not ext.startswith('.'):
-                # e.g. "Dockerfile", "Makefile" → exact filename
+            if ext.startswith('.'):
+                # Already has dot: .py, .env, .env.j2 → extension
+                normalized_ext.append(ext)
+            elif '.' in ext:
+                # Has internal dot but no leading dot: env.j2 → .env.j2
+                normalized_ext.append(f'.{ext}')
+            elif ext[0].isupper():
+                # Starts with uppercase, no dot: Dockerfile, Makefile → exact filename
                 self.exact_filenames.append(ext)
-            elif ext.startswith('.') and '.' not in ext[1:]:
-                # e.g. ".env", ".py" → could be extension OR dotfile
-                # Keep as extension (covers both cases via endswith)
-                normalized_ext.append(ext if ext.startswith('.') else f'.{ext}')
             else:
-                # e.g. ".env.j2", "py" → normalize as extension
-                normalized_ext.append(ext if ext.startswith('.') else f'.{ext}')
+                # Lowercase, no dot: py, md, js → extension, add dot
+                normalized_ext.append(f'.{ext}')
 
         self.extensions = normalized_ext
 

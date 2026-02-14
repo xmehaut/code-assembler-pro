@@ -1,11 +1,11 @@
 [project]
 name = "code-assembler-pro"
-version = "4.3.0"
+version = "4.3.1"
 description = "Consolidate your codebase into structured Markdown context for LLMs (Claude, GPT, Gemini)."
 readme = "README.md"
 requires-python = ">=3.9"
 
-# On revient au format "table" pour forcer la compatibilité Metadata 2.1
+# On revient au format "table" pour forcer la compatibilitÃ© Metadata 2.1
 license = {text = "MIT"}
 
 authors = [
@@ -19,7 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    # SUPPRIMÉ : "License :: OSI Approved :: MIT License" (déprécié ici)
+    # SUPPRIMÃ‰ : "License :: OSI Approved :: MIT License" (dÃ©prÃ©ciÃ© ici)
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Documentation",
     "Topic :: Text Processing :: Markup :: Markdown",
@@ -45,8 +45,8 @@ code-assembler = "code_assembler.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-# On désactive la détection automatique des fichiers de licence
-# pour éviter que setuptools n'ajoute le champ 'license-file' qui bugue
+# On dÃ©sactive la dÃ©tection automatique des fichiers de licence
+# pour Ã©viter que setuptools n'ajoute le champ 'license-file' qui bugue
 license-files = []
 
 [tool.setuptools.packages.find]

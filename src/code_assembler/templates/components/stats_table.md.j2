@@ -1,26 +1,6 @@
-## {{ emoji.chart }} Statistics
+## Stats
 
-| Metric | Value |
-|----------|--------|
-| **Processed Files** | {{ total_files }} |
-| **Lines of Code** | {{ total_lines }} |
-| **Characters** | {{ total_chars }} |
-| **Estimated Tokens** | ~{{ estimated_tokens }} |
-| **Extensions** | {{ extensions | join(', ') }} |
-| **Largest File** | {{ largest_file_name }} ({{ largest_file_size }}) |
-| **Max Depth** | {{ max_depth }} level{{ 's' if max_depth > 1 }} |
-
-**Analyzed Paths:**
-{% for p in paths %}
-- `{{ p }}`
-{% endfor %}
-
-{% if exclude_patterns %}
-**Excluded Patterns:** {{ exclude_patterns | join(', ') }}
-{% endif %}
-
+**{{ total_files }}** files | **{{ total_lines }}** lines | ~**{{ estimated_tokens }}** tokens | Extensions: {{ extensions | join(', ') }}
 {% if skipped_count > 0 %}
-**Ignored Files:** {{ skipped_count }}
+Skipped: {{ skipped_count }} file(s)
 {% endif %}
-
----

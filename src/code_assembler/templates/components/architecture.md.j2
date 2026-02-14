@@ -1,23 +1,11 @@
-## {{ emoji.building }} Architecture Analysis
+## Architecture
 
-**Main Components:**
+**Components:**
 {% for comp in components %}
-- `{{ comp.name }}/` ({{ comp.count }} file{{ 's' if comp.count > 1 }})
+- `{{ comp.name }}/` ({{ comp.count }} file{{ 's' if comp.count > 1 else '' }})
 {% endfor %}
 
-**File Distribution by Type:**
+**File types:**
 {% for item in distribution %}
-- `{{ item.ext }}` ({{ item.lang }}): {{ item.count }} file{{ 's' if item.count > 1 }} ({{ item.percentage }}%)
-{% endfor %}
-
-**Detected Design Patterns:**
-{% for pattern in patterns %}
-- {{ pattern }}
-{% endfor %}
-
-**Structure:**
-- Maximum Depth: {{ max_depth }} level{{ 's' if max_depth > 1 }}
-- Distribution by Depth:
-{% for depth, count in depth_distribution.items() %}
-  - Level {{ depth }}: {{ count }} file{{ 's' if count > 1 }}
+- `{{ item.ext }}` ({{ item.lang }}): {{ item.count }} — {{ item.percentage }}%
 {% endfor %}

@@ -97,8 +97,9 @@ class TestInteractiveWizard(unittest.TestCase):
     def test_configure_output_default(self):
         """Test output configuration with default."""
         with patch('builtins.input', return_value=''):
-            output = self.wizard._configure_output()
-            self.assertEqual(output, 'codebase.md')
+            with patch('code_assembler.interactive.os.path.exists', return_value=False):
+                output = self.wizard._configure_output()
+                self.assertEqual(output, 'codebase.md')
 
     def test_configure_output_custom(self):
         """Test output configuration with custom name."""
