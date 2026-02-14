@@ -115,7 +115,7 @@ class TestInteractiveWizard(unittest.TestCase):
             self.assertEqual(advanced['max_file_size_mb'], 10.0)
 
     @patch('builtins.input')
-    @patch('os.path.exists')
+    @patch('code_assembler.interactive.os.path.exists')
     def test_full_wizard_flow(self, mock_exists, mock_input):
         """Test complete wizard flow."""
         # Mock user inputs for entire flow

@@ -66,7 +66,7 @@ class InteractiveWizard:
             elif response in ['n', 'no', 'non']:
                 return False
             else:
-                print("⚠️  Please answer 'y' or 'n'")
+                print(f"{EMOJI['warning']}  Please answer 'y' or 'n'")
 
     def _ask_number(self, question: str, default: float, min_val: float = 0.0) -> float:
         """
@@ -89,11 +89,11 @@ class InteractiveWizard:
             try:
                 value = float(response)
                 if value < min_val:
-                    print(f"⚠️  Value must be >= {min_val}")
+                    print(f"{EMOJI['warning']}  Value must be >= {min_val}")
                     continue
                 return value
             except ValueError:
-                print("⚠️  Please enter a valid number")
+                print(f"{EMOJI['warning']}  Please enter a valid number")
 
     def _ask_text(self, question: str, default: str = "") -> str:
         """
@@ -128,7 +128,7 @@ class InteractiveWizard:
 
         if choice == "1":
             paths = ["."]
-            print(f"✅ Selected: current directory")
+            print(f"{EMOJI['success']} Selected: current directory")
 
         elif choice == "2":
             print("\nEnter directory paths (one per line, empty line to finish):")
@@ -140,11 +140,11 @@ class InteractiveWizard:
                 if os.path.exists(path):
                     if os.path.isdir(path):
                         paths.append(path)
-                        print(f"  ✅ Added: {path}")
+                        print(f"  {EMOJI['success']} Added: {path}")
                     else:
-                        print(f"  ⚠️  '{path}' is not a directory")
+                        print(f"  {EMOJI['warning']}  '{path}' is not a directory")
                 else:
-                    print(f"  ⚠️  '{path}' does not exist")
+                    print(f"  {EMOJI['warning']}  '{path}' does not exist")
 
         elif choice == "3":
             print("\nEnter file paths (one per line, empty line to finish):")
@@ -155,12 +155,12 @@ class InteractiveWizard:
 
                 if os.path.exists(path) and os.path.isfile(path):
                     paths.append(path)
-                    print(f"  ✅ Added: {path}")
+                    print(f"  {EMOJI['success']} Added: {path}")
                 else:
-                    print(f"  ⚠️  '{path}' is not a valid file")
+                    print(f"  {EMOJI['warning']}  '{path}' is not a valid file")
 
         if not paths:
-            print("⚠️  No paths selected, using current directory")
+            print(f"{EMOJI['warning']}  No paths selected, using current directory")
             paths = ["."]
 
         return paths
@@ -188,7 +188,7 @@ class InteractiveWizard:
 
         if choice in presets:
             extensions, desc = presets[choice]
-            print(f"✅ Selected: {desc}")
+            print(f"{EMOJI['success']} Selected: {desc}")
             return extensions
 
         # Custom selection
@@ -210,7 +210,7 @@ class InteractiveWizard:
             extensions.append(ext)
 
         if not extensions:
-            print("⚠️  No extensions selected, using .py as default")
+            print(f"{EMOJI['warning']}  No extensions selected, using .py as default")
             extensions = [".py"]
 
         return extensions
@@ -236,7 +236,7 @@ class InteractiveWizard:
                 if not pattern:
                     break
                 custom_patterns.append(pattern)
-                print(f"  ✅ Added: {pattern}")
+                print(f"  {EMOJI['success']} Added: {pattern}")
 
         if use_defaults:
             return list(set(DEFAULT_EXCLUDE_PATTERNS + custom_patterns))
@@ -255,12 +255,12 @@ class InteractiveWizard:
 
         # Check if file exists
         if os.path.exists(output):
-            if not self._ask_yes_no(f"⚠️  '{output}' already exists. Overwrite?", default=False):
+            if not self._ask_yes_no(f"{EMOJI['warning']}  '{output}' already exists. Overwrite?", default=False):
                 counter = 1
                 while os.path.exists(f"codebase_{counter}.md"):
                     counter += 1
                 output = f"codebase_{counter}.md"
-                print(f"✅ Using: {output}")
+                print(f"{EMOJI['success']} Using: {output}")
 
         return output
 
@@ -318,19 +318,19 @@ class InteractiveWizard:
         """Display configuration summary."""
         self._print_section("Configuration Summary")
 
-        print(f"\n📂 Paths: {', '.join(self.config['paths'])}")
-        print(f"📝 Extensions: {', '.join(self.config['extensions'])}")
-        print(f"💾 Output: {self.config['output']}")
-        print(f"🔧 Recursive: {self.config.get('recursive', True)}")
-        print(f"📖 Include READMEs: {self.config.get('include_readmes', True)}")
-        print(f"📏 Max file size: {self.config.get('max_file_size_mb', 10.0)} MB")
-        print(f"✂️  Truncate large files: {self.config.get('truncate_large_files', True)}")
+        print(f"\n{EMOJI['folder']} Paths: {', '.join(self.config['paths'])}")
+        print(f"{EMOJI['memo']} Extensions: {', '.join(self.config['extensions'])}")
+        print(f"{EMOJI['floppy']} Output: {self.config['output']}")
+        print(f"{EMOJI['recycle']} Recursive: {self.config.get('recursive', True)}")
+        print(f"{EMOJI['book']} Include READMEs: {self.config.get('include_readmes', True)}")
+        print(f"{EMOJI['mag']} Max file size: {self.config.get('max_file_size_mb', 10.0)} MB")
+        print(f"{EMOJI['warning']}  Truncate large files: {self.config.get('truncate_large_files', True)}")
 
         if self.config.get('truncate_large_files'):
             print(f"   Keep first {self.config.get('truncation_limit_lines', 500)} lines")
 
         if self.config.get('exclude_patterns'):
-            print(f"\n🚫 Exclusions: {len(self.config['exclude_patterns'])} patterns")
+            print(f"\n{EMOJI['error']} Exclusions: {len(self.config['exclude_patterns'])} patterns")
             if len(self.config['exclude_patterns']) <= 5:
                 for pattern in self.config['exclude_patterns']:
                     print(f"   - {pattern}")
@@ -341,7 +341,7 @@ class InteractiveWizard:
 
     def _save_config(self):
         """Optionally save configuration to JSON."""
-        if self._ask_yes_no("\n💾 Save this configuration for future use?", default=False):
+        if self._ask_yes_no(f"\n{EMOJI['floppy']} Save this configuration for future use?", default=False):
             import json
 
             config_name = self._ask_text("Configuration filename", default="assembler_config.json")
@@ -354,7 +354,7 @@ class InteractiveWizard:
             with open(config_name, 'w', encoding='utf-8') as f:
                 json.dump(save_config, f, indent=2, ensure_ascii=False)
 
-            print(f"✅ Configuration saved to: {config_name}")
+            print(f"{EMOJI['success']} Configuration saved to: {config_name}")
             print(f"   Reuse it with: code-assembler --config {config_name}")
 
     def run(self) -> Optional[str]:
@@ -390,7 +390,7 @@ class InteractiveWizard:
 
             # Confirm
             if not self._ask_yes_no(f"\n{EMOJI['rocket']} Start assembly?", default=True):
-                print("\n❌ Assembly cancelled.")
+                print(f"\n{EMOJI['error']} Assembly cancelled.")
                 return None
 
             # Save config option
@@ -402,15 +402,15 @@ class InteractiveWizard:
             content = assemble_codebase(**self.config)
 
             print(f"\n{EMOJI['success']} Assembly completed successfully!")
-            print(f"📄 Output file: {self.config['output']}")
+            print(f"{EMOJI['file']} Output file: {self.config['output']}")
 
             return content
 
         except KeyboardInterrupt:
-            print("\n\n❌ Wizard cancelled by user.")
+            print(f"\n\n{EMOJI['error']} Wizard cancelled by user.")
             return None
         except Exception as e:
-            print(f"\n❌ An error occurred: {e}")
+            print(f"\n{EMOJI['error']} An error occurred: {e}")
             import traceback
             traceback.print_exc()
             return None

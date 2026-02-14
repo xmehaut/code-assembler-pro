@@ -106,7 +106,12 @@ def main():
     args = parse_args()
 
     try:
-        if args.config:
+        if args.interactive:
+            # Interactive Wizard Mode
+            from .interactive import run_interactive_mode
+            run_interactive_mode()
+            return
+        elif args.config:
             # JSON Configuration Mode
             print(f"Loading configuration from: {args.config}")
             assemble_from_config(args.config)
@@ -140,7 +145,7 @@ def main():
             )
 
     except Exception as e:
-        print(f"\n❌ An error occurred: {str(e)}")
+        print(f"\nâŒ An error occurred: {str(e)}")
         sys.exit(1)
 
 

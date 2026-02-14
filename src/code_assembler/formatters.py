@@ -20,6 +20,12 @@ class MarkdownFormatter:
         """Initialize Jinja2 environment."""
         template_dir = Path(__file__).parent / "templates"
 
+        if not template_dir.exists():
+            raise FileNotFoundError(
+                f"Templates directory not found: {template_dir}\n"
+                f"If installed via .whl, ensure templates are included in package_data."
+            )
+
         self.env = Environment(
             loader=FileSystemLoader(template_dir),
             trim_blocks=True,

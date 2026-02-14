@@ -7,10 +7,11 @@ including language mappings, file extensions, and default configurations.
 
 from typing import Dict
 
-# In code_assembler/constants.py
-
-# Version
-__version__ = "4.2.1"  # Changed from 4.1.0
+try:
+    from importlib.metadata import version as _get_version
+    __version__ = _get_version("code-assembler-pro")
+except Exception:
+    __version__ = "4.2.1"  # Fallback for dev mode without pip install
 
 # Language mapping for syntax highlighting
 LANGUAGE_MAP: Dict[str, str] = {
@@ -171,28 +172,76 @@ CHARS_PER_TOKEN = 4  # Average characters per token (rough estimate)
 DEFAULT_MAX_FILE_SIZE_MB = 10.0
 MAX_SAFE_FILE_SIZE_MB = 100.0
 
-# Emojis for output formatting
-EMOJI = {
-    "folder": "📁",
-    "file": "📄",
-    "readme": "ℹ️",
-    "success": "✅",
-    "warning": "⚠️",
-    "error": "❌",
-    "rocket": "🚀",
-    "chart": "📊",
-    "target": "🎯",
-    "building": "🏛️",
-    "map": "🗺️",
-    "book": "📖",
-    "bug": "🐛",
-    "memo": "📝",
-    "mag": "🔍",
-    "test": "🧪",
-    "recycle": "🔄",
-    "bulb": "💡",
-    "floppy": "💾",
+
+def _supports_emoji() -> bool:
+    """Detect if the terminal can display emoji correctly."""
+    import sys
+    import os
+
+    # Non-interactive (piped, CI) -> skip detection
+    if not sys.stderr.isatty():
+        return False
+
+    # Windows: only Windows Terminal and modern consoles support emoji
+    if os.name == 'nt':
+        if os.environ.get('WT_SESSION'):
+            return True
+        if os.environ.get('TERM_PROGRAM'):
+            return True
+        return False
+
+    # macOS / Linux -> generally fine
+    return True
+
+
+# Emoji icons (using Unicode escapes for encoding safety)
+_EMOJI_ICONS = {
+    "folder": "\U0001f4c1",
+    "file": "\U0001f4c4",
+    "readme": "\u2139\ufe0f",
+    "success": "\u2705",
+    "warning": "\u26a0\ufe0f",
+    "error": "\u274c",
+    "rocket": "\U0001f680",
+    "chart": "\U0001f4ca",
+    "target": "\U0001f3af",
+    "building": "\U0001f3db\ufe0f",
+    "map": "\U0001f5fa\ufe0f",
+    "book": "\U0001f4d6",
+    "bug": "\U0001f41b",
+    "memo": "\U0001f4dd",
+    "mag": "\U0001f50d",
+    "test": "\U0001f9ea",
+    "recycle": "\U0001f504",
+    "bulb": "\U0001f4a1",
+    "floppy": "\U0001f4be",
 }
+
+# ASCII fallbacks for terminals that don't support emoji
+_ASCII_ICONS = {
+    "folder": "[DIR]",
+    "file": "[FILE]",
+    "readme": "[i]",
+    "success": "[OK]",
+    "warning": "[!]",
+    "error": "[X]",
+    "rocket": "[>>]",
+    "chart": "[#]",
+    "target": "[*]",
+    "building": "[B]",
+    "map": "[M]",
+    "book": "[B]",
+    "bug": "[bug]",
+    "memo": "[N]",
+    "mag": "[?]",
+    "test": "[T]",
+    "recycle": "[R]",
+    "bulb": "[!]",
+    "floppy": "[S]",
+}
+
+# Select the right icon set for the current terminal
+EMOJI = _EMOJI_ICONS if _supports_emoji() else _ASCII_ICONS
 
 # Header templates
 HEADER_LEVELS = {

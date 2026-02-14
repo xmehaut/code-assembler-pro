@@ -11,10 +11,13 @@ from typing import Optional
 def detect_encoding(file_path: str) -> str:
     """
     Detect the encoding of a file with intelligent fallback.
+    Reads only a sample (64KB) to avoid loading huge files into memory.
     """
+    SAMPLE_SIZE = 65536  # 64KB is enough for reliable detection
+
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
-            f.read()
+            f.read(SAMPLE_SIZE)
         return 'utf-8'
     except UnicodeDecodeError:
         pass
@@ -23,7 +26,7 @@ def detect_encoding(file_path: str) -> str:
 
     try:
         with open(file_path, 'rb') as f:
-            raw_data = f.read()
+            raw_data = f.read(SAMPLE_SIZE)
             result = chardet.detect(raw_data)
             detected_encoding = result.get('encoding')
             return detected_encoding if detected_encoding else 'utf-8'
@@ -43,11 +46,11 @@ def read_file_content(file_path: str, encoding: Optional[str] = None) -> str:
             return f.read()
 
     except FileNotFoundError:
-        return f"[❌ File not found: {file_path}]"
+        return f"[ERROR] File not found: {file_path}"
     except PermissionError:
-        return f"[❌ Permission denied: {file_path}]"
+        return f"[ERROR] Permission denied: {file_path}"
     except Exception as e:
-        return f"[❌ Error reading file: {str(e)}]"
+        return f"[ERROR] Error reading file: {str(e)}"
 
 
 def write_file_content(file_path: str, content: str, encoding: str = 'utf-8') -> bool:
@@ -59,7 +62,7 @@ def write_file_content(file_path: str, content: str, encoding: str = 'utf-8') ->
             f.write(content)
         return True
     except Exception as e:
-        print(f"❌ Error writing file {file_path}: {e}")
+        print(f"[ERROR] Error writing file {file_path}: {e}")
         return False
 
 
@@ -80,4 +83,4 @@ def read_file_head(file_path: str, max_lines: int, encoding: Optional[str] = Non
                 lines.append(line)
         return "".join(lines)
     except Exception as e:
-        return f"[❌ Error reading file head: {str(e)}]"
+        return f"[ERROR] Error reading file head: {str(e)}"

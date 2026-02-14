@@ -59,12 +59,12 @@ class CodebaseAssembler:
                     )
                     is_truncated = True
                     if self.config.show_progress:
-                        print(f"  ✂️  Truncated (too large): {Path(file_path).name}")
+                        print(f"  {EMOJI['warning']}  Truncated (too large): {Path(file_path).name}")
                 else:
                     reason = f"too large: {size_mb:.1f}MB"
                     self.stats.skip_file(file_path, reason)
                     if self.config.show_progress:
-                        print(f"⚠️  Skipped (too large): {file_path}")
+                        print(f"{EMOJI['warning']}  Skipped (too large): {file_path}")
                     return False
             else:
                 content = read_file_content(file_path)
@@ -73,10 +73,10 @@ class CodebaseAssembler:
             self.stats.skip_file(file_path, f"system error: {e}")
             return False
 
-        if content.startswith("[❌"):
+        if content.startswith("[ERROR]"):
             self.stats.skip_file(file_path, "read error")
             if self.config.show_progress:
-                print(f"❌ Read error: {file_path}")
+                print(f"{EMOJI['error']} Read error: {file_path}")
             return False
 
         line_count = count_lines(content)
@@ -104,7 +104,7 @@ class CodebaseAssembler:
         ))
 
         if self.config.show_progress and not is_truncated:
-            print(f"  ✅ {Path(file_path).name} ({line_count:,} lines)")
+            print(f"  {EMOJI['success']} {Path(file_path).name} ({line_count:,} lines)")
 
         return True
 
@@ -118,12 +118,12 @@ class CodebaseAssembler:
             ):
                 content = read_file_content(readme_path)
 
-                if not content.startswith("[❌"):
+                if not content.startswith("[ERROR]"):
                     md_block = self.formatter.format_readme_context(content, depth)
                     self.content_buffer.append(md_block)
 
                     if self.config.show_progress:
-                        print(f"  ℹ️  README found: {readme_name}")
+                        print(f"  {EMOJI['readme']}  README found: {readme_name}")
 
                     return True
         return False
@@ -134,12 +134,12 @@ class CodebaseAssembler:
 
         if should_exclude(str(current_path), self.config.exclude_patterns):
             if self.config.show_progress:
-                print(f"⏭️  Excluded: {current_path}")
+                print(f"{EMOJI['warning']}  Excluded: {current_path}")
             return
 
         if self.config.show_progress:
             indent = "  " * depth
-            print(f"{indent}📁 {current_path.name}")
+            print(f"{indent}{EMOJI['folder']} {current_path.name}")
 
         try:
             if self.config.include_readmes:
@@ -169,11 +169,11 @@ class CodebaseAssembler:
 
         except PermissionError:
             if self.config.show_progress:
-                print(f"❌ Permission denied: {current_path}")
+                print(f"{EMOJI['error']} Permission denied: {current_path}")
             self.stats.skip_file(str(current_path), "permission denied")
         except Exception as e:
             if self.config.show_progress:
-                print(f"❌ Error processing {current_path}: {e}")
+                print(f"{EMOJI['error']} Error processing {current_path}: {e}")
             self.stats.skip_file(str(current_path), str(e))
 
     def assemble(self) -> str:
@@ -184,11 +184,11 @@ class CodebaseAssembler:
         for path in self.config.paths:
             if not os.path.exists(path):
                 if self.config.show_progress:
-                    print(f"⚠️  Path does not exist: {path}")
+                    print(f"{EMOJI['warning']}  Path does not exist: {path}")
                 continue
 
             if self.config.show_progress:
-                print(f"\n📂 Processing: {path}")
+                print(f"\n{EMOJI['folder']} Processing: {path}")
 
             if os.path.isfile(path):
                 if any(path.endswith(ext) for ext in self.config.extensions):
@@ -222,18 +222,18 @@ class CodebaseAssembler:
         from .utils import format_file_size, format_number
 
         print(f"\n{EMOJI['success']} Assembly completed!")
-        print(f"\n📊 Summary:")
-        print(f"   📄 Files: {format_number(self.stats.total_files)}")
-        print(f"   📏 Lines: {format_number(self.stats.total_lines)}")
-        print(f"   💾 Size: {format_file_size(self.stats.total_chars)}")
-        print(f"   🎯 Tokens: ~{format_number(self.stats.estimated_tokens)}")
+        print(f"\n{EMOJI['chart']} Summary:")
+        print(f"   {EMOJI['file']} Files: {format_number(self.stats.total_files)}")
+        print(f"   {EMOJI['mag']} Lines: {format_number(self.stats.total_lines)}")
+        print(f"   {EMOJI['floppy']} Size: {format_file_size(self.stats.total_chars)}")
+        print(f"   {EMOJI['target']} Tokens: ~{format_number(self.stats.estimated_tokens)}")
 
         if self.stats.estimated_tokens > 100000:
-            print(f"\n⚠️  WARNING: High token volume (>100k).")
+            print(f"\n{EMOJI['warning']}  WARNING: High token volume (>100k).")
             print(f"    Check your model's context limit (GPT-4o: 128k, Claude: 200k).")
 
         if self.stats.skipped_files:
-            print(f"\n⚠️  Skipped files: {len(self.stats.skipped_files)}")
+            print(f"\n{EMOJI['warning']}  Skipped files: {len(self.stats.skipped_files)}")
             for skipped in self.stats.skipped_files[:5]:
                 print(f"   - {skipped}")
 
@@ -275,4 +275,11 @@ def assemble_from_config(config_file: str) -> str:
     import json
     with open(config_file, 'r', encoding='utf-8') as f:
         config_data = json.load(f)
+
+    # Normalize: JSON may use "output" or "output_file" -- both map to the "output" parameter
+    if 'output_file' in config_data and 'output' not in config_data:
+        config_data['output'] = config_data.pop('output_file')
+    elif 'output_file' in config_data:
+        config_data.pop('output_file')
+
     return assemble_codebase(**config_data)

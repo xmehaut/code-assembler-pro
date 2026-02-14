@@ -113,6 +113,7 @@ class CodebaseStats:
     total_files: int = 0
     total_lines: int = 0
     total_chars: int = 0
+    source_chars: int = 0
     estimated_tokens: int = 0
     files_by_ext: dict = field(default_factory=dict)
     largest_file: Optional[tuple] = None
@@ -126,6 +127,7 @@ class CodebaseStats:
     def add_file(self, extension: str, lines: int, size: int):
         self.total_files += 1
         self.total_lines += lines
+        self.source_chars += size
 
         if extension not in self.files_by_ext:
             self.files_by_ext[extension] = 0

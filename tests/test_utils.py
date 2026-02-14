@@ -41,11 +41,22 @@ class TestUtils(unittest.TestCase):
         # Case 4: Should NOT exclude
         self.assertFalse(should_exclude("src/main.py", patterns))
 
-        # Case 5: Partial pattern (prefix)
-        self.assertTrue(should_exclude("tests/test_user.py", ["test_"]))
+        # Case 5: Glob pattern (prefix match with wildcard)
+        self.assertTrue(should_exclude("tests/test_user.py", ["test_*"]))
+
+        # Case 6: No false positives — "dist" must NOT match "redistribute"
+        self.assertFalse(should_exclude("src/redistribute.py", ["dist"]))
+
+        # Case 7: No false positives — "env" must NOT match "environment.py"
+        self.assertFalse(should_exclude("src/environment.py", ["env"]))
+
+        # Case 8: Extension pattern
+        self.assertTrue(should_exclude("cache/module.pyc", [".pyc"]))
 
     def test_format_file_size(self):
         """Test human-readable file size formatting."""
+        self.assertEqual(format_file_size(0), "0B")
+        self.assertEqual(format_file_size(512), "512B")
         self.assertEqual(format_file_size(1024), "1.0KB")
         self.assertEqual(format_file_size(1572864), "1.5MB")
 

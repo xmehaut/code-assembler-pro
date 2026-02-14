@@ -6,7 +6,8 @@ string formatting, and other common operations.
 """
 
 import re
-from pathlib import Path
+import fnmatch
+from pathlib import Path, PurePosixPath
 from typing import List, Set
 
 from .constants import CHARS_PER_TOKEN
@@ -14,17 +15,14 @@ from .constants import CHARS_PER_TOKEN
 
 def normalize_path(path: str) -> str:
     """
-    Normalize a path to a consistent format.
-    Converts to absolute, POSIX-style, lowercase path without trailing slash.
+    Normalize a path to a consistent POSIX-style lowercase string.
+    Does NOT resolve against CWD to avoid environment-dependent behavior.
     """
     if not path:
         return ""
 
-    p = Path(path)
-    if not p.is_absolute():
-        p = p.resolve()
-
-    return str(p).replace("\\", "/").lower().rstrip("/")
+    # Convert to forward slashes and lowercase, strip trailing slash
+    return str(PurePosixPath(path)).replace("\\", "/").lower().rstrip("/")
 
 
 def slugify_path(path: str) -> str:
@@ -37,35 +35,46 @@ def slugify_path(path: str) -> str:
 def should_exclude(path: str, exclude_patterns: List[str]) -> bool:
     """
     Determine if a path should be excluded based on patterns.
+
+    Matching rules:
+    - Exact segment match: pattern "dist" matches dir/segment "dist" but NOT "redistribute"
+    - Glob patterns: "*.pyc" matches any .pyc file, "test_*" matches files starting with test_
+    - Path patterns (with /): matched against the full normalized path
     """
     if not exclude_patterns:
         return False
 
     path_norm = normalize_path(path)
-    path_parts: Set[str] = set(p for p in path_norm.split("/") if p)
+    path_parts: List[str] = [p for p in path_norm.split("/") if p]
 
     for pattern in exclude_patterns:
         if not pattern:
             continue
 
-        # Simple pattern (no slashes)
-        if "/" not in pattern and "\\" not in pattern:
-            clean_pattern = pattern.lower()
+        clean_pattern = pattern.lower().rstrip("/")
 
-            # Exact segment match
-            if clean_pattern in path_parts:
-                return True
-
-            # Partial segment match (prefix/suffix)
-            for part in path_parts:
-                if part.startswith(clean_pattern) or part.endswith(clean_pattern):
-                    return True
-        else:
-            # Path-based pattern
-            pattern_norm = normalize_path(pattern)
+        # Path-based pattern (contains /)
+        if "/" in clean_pattern or "\\" in clean_pattern:
+            pattern_norm = normalize_path(clean_pattern)
             if path_norm == pattern_norm:
                 return True
-            if path_norm.startswith(pattern_norm + "/"):
+            if ("/" + pattern_norm + "/") in ("/" + path_norm + "/"):
+                return True
+            continue
+
+        # Simple pattern — match against each path segment
+        for part in path_parts:
+            # Exact segment match (e.g. "dist" matches "dist" not "redistribute")
+            if part == clean_pattern:
+                return True
+
+            # Glob match (e.g. "*.pyc" matches "foo.pyc", "test_*" matches "test_main.py")
+            if ("*" in clean_pattern or "?" in clean_pattern):
+                if fnmatch.fnmatch(part, clean_pattern):
+                    return True
+
+            # Extension match (e.g. ".pyc" matches any file ending with .pyc)
+            if clean_pattern.startswith(".") and part.endswith(clean_pattern):
                 return True
 
     return False
@@ -82,11 +91,14 @@ def format_file_size(size_bytes: int) -> str:
     """
     Format a file size in human-readable format.
     """
+    if size_bytes == 0:
+        return "0B"
+    size = float(size_bytes)
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        if size_bytes < 1024.0:
-            return f"{size_bytes:.1f}{unit}"
-        size_bytes /= 1024.0
-    return f"{size_bytes:.1f}PB"
+        if size < 1024.0:
+            return f"{size:.1f}{unit}" if unit != 'B' else f"{int(size)}{unit}"
+        size /= 1024.0
+    return f"{size:.1f}PB"
 
 
 def format_number(num: int) -> str:
