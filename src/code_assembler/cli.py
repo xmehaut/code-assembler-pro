@@ -107,6 +107,13 @@ def parse_args():
         help=f"Maximum file size in MB (default: {DEFAULT_MAX_FILE_SIZE_MB})"
     )
 
+    parser.add_argument(
+        "--since", "-s",
+        type=str,
+        metavar="SNAPSHOT",
+        help="Only include files modified since the given .md snapshot (e.g. viewer.md)"
+    )
+
     # Set defaults for flags
     parser.set_defaults(
         recursive=True,
@@ -165,7 +172,7 @@ def main():
         # JSON Configuration Mode
         if args.config:
             print(f"Loading configuration from: {args.config}")
-            assemble_from_config(args.config)
+            assemble_from_config(args.config, since=args.since)  # ← nouveau
             return
 
         # CLI Arguments Mode
@@ -198,7 +205,8 @@ def main():
             recursive=args.recursive,
             include_readmes=args.include_readmes,
             max_file_size_mb=args.max_size,
-            use_default_excludes=args.use_default_excludes
+            use_default_excludes=args.use_default_excludes,
+            since=args.since,  # ← nouveau
         )
 
     except Exception as e:

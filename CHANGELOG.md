@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [4.3.2] - 2026-02-16
+
+### Fixed
+
+- **Interactive mode: comma-separated extensions corrupted JSON config**
+  - When a user typed extensions with commas (e.g. `.py, .yaml, .tsx,`), the wizard
+    preserved the commas inside the strings (e.g. `".py,"`) causing zero files to match
+  - `_select_extensions()` in `interactive.py` now strips commas before parsing:
+    `extensions_input.replace(',', ' ').split()` + `rstrip(',')` as double safety
+  - Regression test added: `test_select_extensions_custom_with_commas` in `test_interactive.py`
+
+---
 
 ## [4.3.1] - 2026-02-14
 

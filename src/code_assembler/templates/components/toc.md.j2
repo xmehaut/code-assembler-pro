@@ -1,6 +1,6 @@
 ## Table of Contents
 
 {% for entry in entries %}
-{{ "  " * entry.depth }}- {% if entry.is_directory %}`{{ entry.name }}/`{% else %}`{{ entry.name }}`{% endif %}
+{{ "  " * entry.depth }}- {% if entry.is_directory %}`{{ entry.name }}/`{% else %}`{{ entry.name }}` | {{ entry.mtime }}{% endif %}
 
 {% endfor %}

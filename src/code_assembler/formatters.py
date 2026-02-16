@@ -1,7 +1,12 @@
 """
 Markdown formatters for Code Assembler Pro using Jinja2 templates.
-"""
 
+This module handles the transformation of analyzed codebase data into
+structured Markdown, including the generation of a hidden metadata block
+for delta analysis.
+"""
+import os
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
@@ -17,7 +22,7 @@ class MarkdownFormatter:
     """Handles formatting of content into Markdown using Jinja2."""
 
     def __init__(self):
-        """Initialize Jinja2 environment."""
+        """Initialize Jinja2 environment and global variables."""
         template_dir = Path(__file__).parent / "templates"
 
         if not template_dir.exists():
@@ -42,7 +47,13 @@ class MarkdownFormatter:
         })
 
     def render(self, template_name: str, data: Dict[str, Any]) -> str:
-        """Helper to render a template with data."""
+        """
+        Helper to render a template with data.
+
+        Args:
+            template_name: Name of the .j2 template file.
+            data: Dictionary of variables for the template.
+        """
         template = self.env.get_template(template_name)
         return template.render(**data)
 
@@ -86,6 +97,15 @@ class MarkdownFormatter:
         """Generate table of contents using the toc template."""
         toc_data = []
         for e in entries:
+            mtime = ""
+            if e.is_file:
+                try:
+                    mtime = datetime.fromtimestamp(
+                        os.path.getmtime(e.path)
+                    ).strftime("%Y-%m-%d %H:%M")
+                except OSError:
+                    mtime = ""
+
             toc_data.append({
                 "depth": e.depth,
                 "is_directory": e.is_directory,
@@ -93,7 +113,8 @@ class MarkdownFormatter:
                 "name": e.name,
                 "anchor": slugify_path(e.path),
                 "size": format_file_size(e.size_bytes) if e.is_file else "",
-                "lines": format_number(e.line_count) if e.is_file else ""
+                "lines": format_number(e.line_count) if e.is_file else "",
+                "mtime": mtime,
             })
 
         return self.render("components/toc.md.j2", {"entries": toc_data})
@@ -107,7 +128,6 @@ class MarkdownFormatter:
             largest_file_name = Path(stats.largest_file[0]).name
             largest_file_size = format_file_size(stats.largest_file[1])
 
-        # Clean extensions for display
         clean_extensions = sorted(list(set(
             ext.replace('*', '').lstrip('.') for ext in config.extensions
         )))
@@ -139,3 +159,43 @@ class MarkdownFormatter:
             "stats_table": self.generate_stats_table(stats, config)
         }
         return self.render("main_header.md.j2", data)
+
+    def generate_metadata_block(self, entries: List[FileEntry]) -> str:
+        """
+        Generate a hidden JSON metadata block at the end of the Markdown file.
+
+        This block stores exact relative paths (relative to the current working directory)
+        and modification times. Using the CWD ensures path consistency across
+        full and partial (delta) assembly runs.
+        """
+        meta_files = {}
+
+        # Use Current Working Directory as the stable root for all relative paths
+        common_root = os.getcwd()
+
+        for e in entries:
+            if e.is_file:
+                try:
+                    # Calculate path relative to the execution root
+                    # We normalize to forward slashes for cross-platform compatibility
+                    rel_path = os.path.relpath(e.path, common_root).replace('\\', '/')
+
+                    # Get modification time formatted to the minute (matching TOC display)
+                    mtime = datetime.fromtimestamp(
+                        os.path.getmtime(e.path)
+                    ).strftime("%Y-%m-%d %H:%M")
+
+                    meta_files[rel_path] = mtime
+                except (OSError, ValueError):
+                    # Skip files that cannot be accessed or are on different drives (Windows)
+                    continue
+
+        metadata = {
+            "version": __version__,
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "files": meta_files
+        }
+
+        # Wrap the JSON string in an HTML comment to keep it invisible in UI/Renderers
+        # indent=2 makes it readable for debugging in raw text mode
+        return f"\n\n<!-- CODE_ASSEMBLER_METADATA\n{json.dumps(metadata, indent=2)}\n-->"

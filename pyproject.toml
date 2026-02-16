@@ -1,6 +1,6 @@
 [project]
 name = "code-assembler-pro"
-version = "4.3.1"
+version = "4.4.0"
 description = "Consolidate your codebase into structured Markdown context for LLMs (Claude, GPT, Gemini)."
 readme = "README.md"
 requires-python = ">=3.9"
