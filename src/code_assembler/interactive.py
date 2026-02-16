@@ -204,7 +204,8 @@ class InteractiveWizard:
         extensions_input = input("Extensions: ").strip()
 
         extensions = []
-        for ext in extensions_input.split():
+        for ext in extensions_input.replace(',', ' ').split():
+            ext = ext.strip().rstrip(',')  # double sécurité
             if not ext.startswith('.'):
                 ext = '.' + ext
             extensions.append(ext)

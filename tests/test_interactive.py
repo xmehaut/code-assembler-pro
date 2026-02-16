@@ -160,6 +160,28 @@ class TestInteractiveWizard(unittest.TestCase):
         self.assertIn('.py', self.wizard.available_extensions)
         self.assertIn('.js', self.wizard.available_extensions)
 
+    def test_select_extensions_custom_with_commas(self):
+        """Regression test: extensions typed with commas must be cleaned."""
+        # Simule l'utilisateur qui tape ".py, .yaml, .tsx,"
+        with patch('builtins.input', side_effect=['8', '.py, .yaml, .tsx,']):
+            extensions = self.wizard._select_extensions()
+
+        self.assertIn('.py', extensions)
+        self.assertIn('.yaml', extensions)
+        self.assertIn('.tsx', extensions)
+        # S'assurer qu'aucune extension ne contient de virgule
+        for ext in extensions:
+            self.assertNotIn(',', ext, f"Extension '{ext}' contains a comma!")
+
+    def test_select_extensions_custom_space_separated(self):
+        """Normal case: space-separated extensions work correctly."""
+        with patch('builtins.input', side_effect=['8', '.py .yaml .tsx']):
+            extensions = self.wizard._select_extensions()
+
+        self.assertIn('.py', extensions)
+        self.assertIn('.yaml', extensions)
+        self.assertIn('.tsx', extensions)
+
 
 if __name__ == '__main__':
     unittest.main()
