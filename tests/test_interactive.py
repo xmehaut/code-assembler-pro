@@ -182,6 +182,5 @@ class TestInteractiveWizard(unittest.TestCase):
         self.assertIn('.yaml', extensions)
         self.assertIn('.tsx', extensions)
 
-
 if __name__ == '__main__':
     unittest.main()

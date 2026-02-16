@@ -6,8 +6,6 @@ and running the assembler without memorizing CLI arguments.
 """
 
 import os
-import sys
-from pathlib import Path
 from typing import List, Optional, Dict, Any
 
 from .constants import LANGUAGE_MAP, DEFAULT_EXCLUDE_PATTERNS, EMOJI
