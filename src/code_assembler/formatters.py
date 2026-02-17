@@ -57,16 +57,38 @@ class MarkdownFormatter:
         template = self.env.get_template(template_name)
         return template.render(**data)
 
-    def format_file_block(
-            self,
-            file_path: str,
-            content: str,
-            depth: int = 0,
-            size_bytes: int = 0,
-            line_count: int = 0
-    ) -> str:
+    def _detect_language(self, file_path: str) -> str:
+        """
+        Detect the programming language for syntax highlighting.
+        Checks extensions first, then falls back to exact filenames.
+        """
+        path_obj = Path(file_path)
+        ext = path_obj.suffix.lower()
+        filename = path_obj.name.lower()
+
+        # 1. Try by extension
+        lang = LANGUAGE_MAP.get(ext, "text")
+
+        # 2. Fallback for special filenames if lang is still 'text'
+        if lang == "text":
+            if filename == "dockerfile":
+                lang = "dockerfile"
+            elif filename == "makefile":
+                lang = "makefile"
+            elif filename == "procfile":
+                lang = "ruby"
+            elif filename.startswith(".env"):
+                lang = "bash"
+            elif filename == "cmakelists.txt":
+                lang = "cmake"
+
+        return lang
+
+    def format_file_block(self, file_path: str, content: str, depth: int = 0,
+                          size_bytes: int = 0, line_count: int = 0) -> str:
         """Format a file's content using the file_block template."""
-        ext = Path(file_path).suffix
+        lang = self._detect_language(file_path)  # Utilisation de la nouvelle méthode
+
         data = {
             "header_level": "#" * (2 + depth),
             "filename": Path(file_path).name,
@@ -74,7 +96,7 @@ class MarkdownFormatter:
             "path": file_path,
             "size": format_file_size(size_bytes),
             "lines": format_number(line_count),
-            "lang": LANGUAGE_MAP.get(ext, "text"),
+            "lang": lang,
             "content": content
         }
         return self.render("components/file_block.md.j2", data)

@@ -9,6 +9,8 @@ import re
 import fnmatch
 from pathlib import Path, PurePosixPath
 from typing import List, Set
+import subprocess
+import platform
 
 from .constants import CHARS_PER_TOKEN
 
@@ -120,3 +122,28 @@ def count_lines(text: str) -> int:
     Count the number of lines in a text.
     """
     return len(text.splitlines())
+
+
+
+def copy_to_clipboard(text: str) -> bool:
+    """
+    Copy text to the system clipboard without external dependencies.
+    Supports Windows, macOS, and Linux (requires xclip or xsel).
+    """
+    system = platform.system()
+    try:
+        if system == "Windows":
+            # Windows native 'clip' command
+            subprocess.run("clip", input=text, text=True, check=True)
+        elif system == "Darwin":  # macOS
+            # macOS native 'pbcopy' command
+            subprocess.run("pbcopy", input=text, text=True, check=True)
+        elif system == "Linux":
+            # Linux requires xclip or xsel
+            try:
+                subprocess.run(["xclip", "-selection", "clipboard"], input=text, text=True, check=True)
+            except FileNotFoundError:
+                subprocess.run(["xsel", "--clipboard", "--input"], input=text, text=True, check=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False

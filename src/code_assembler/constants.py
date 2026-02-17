@@ -126,6 +126,31 @@ LANGUAGE_MAP: Dict[str, str] = {
     ".proto": "protobuf",
     ".graphql": "graphql",
     ".gql": "graphql",
+
+    # Templates & Web Engines
+    ".j2": "jinja2",
+    ".jinja": "jinja2",
+    ".jinja2": "jinja2",
+    ".liquid": "liquid",
+    ".handlebars": "handlebars",
+    ".hbs": "handlebars",
+    ".mustache": "mustache",
+
+    # Infrastructure & Cloud (DevOps)
+    ".tf": "hcl",
+    ".hcl": "hcl",
+    ".terraform": "hcl",
+    ".nomad": "hcl",
+    ".k8s": "yaml",
+    ".properties": "properties",
+
+    # Modern Web & Data
+    ".astro": "astro",
+    ".prisma": "prisma",
+    ".graphql": "graphql",
+    ".gql": "graphql",
+    ".ipynb": "json",
+    ".jsonl": "json",
 }
 
 # Default exclude patterns
@@ -215,6 +240,7 @@ _EMOJI_ICONS = {
     "recycle": "\U0001f504",
     "bulb": "\U0001f4a1",
     "floppy": "\U0001f4be",
+    "clipboard": "\U0001f4cb",
 }
 
 # ASCII fallbacks for terminals that don't support emoji
@@ -238,6 +264,7 @@ _ASCII_ICONS = {
     "recycle": "[R]",
     "bulb": "[!]",
     "floppy": "[S]",
+    "clipboard": "[CLIP]",
 }
 
 # Select the right icon set for the current terminal

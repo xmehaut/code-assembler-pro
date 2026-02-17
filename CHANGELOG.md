@@ -1,4 +1,4 @@
-## [4.4.0] - 2026-02-16
+## [4.4.0] - 2026-02-17
 
 ### Added
 
@@ -8,10 +8,16 @@
 - **Hidden Metadata Injection**
   - Injects a hidden JSON block (`<!-- CODE_ASSEMBLER_METADATA -->`) at the end of generated files.
   - Stores exact relative paths and modification timestamps (mtime) for 100% reliable change detection.
-- **Duplicate Filename Support**
-  - Accurate tracking of files with identical names in different directories (e.g., multiple `__init__.py` or `config.py`).
-- **New Test Suite**
-  - Added `tests/test_delta_scenario.py` to validate complex delta scenarios, including duplicate filenames and cross-platform path handling.
+- **Enhanced Syntax Highlighting**
+  - Added support for **Jinja2 templates** (`.j2`, `.jinja`, `.jinja2`).
+  - Added support for modern formats: **HCL/Terraform** (`.tf`), **Astro**, **Prisma**, and **GraphQL**.
+  - Smart detection for extensionless files: `Dockerfile`, `Makefile`, `Procfile`, and `.env` files now get proper syntax highlighting.
+- **New Test Suites**
+  - `tests/test_delta_scenario.py`: Validates complex delta scenarios and cross-platform path handling.
+  - `tests/test_formats.py`: Validates language detection logic and syntax highlighting tags.
+- **Clipboard Support (`--clip` / `-k`)**
+  - Direct copy of the generated Markdown to the system clipboard.
+  - Cross-platform support (Windows, macOS, Linux) with no extra dependencies.
 
 ### Fixed
 
@@ -24,7 +30,9 @@
 ### Changed
 
 - **`delta.py` Refactor**: Completely rewritten to prioritize metadata-based analysis.
-- **`formatters.py`**: Updated to handle JSON metadata generation and injection.
+- **`formatters.py` Refactor**: 
+  - Isolated language detection into a dedicated `_detect_language` method for better testability.
+  - Updated to handle JSON metadata generation and injection.
 - **`core.py`**: Integrated the delta filtering pipeline and metadata block generation into the main assembly flow.
 - **Module Documentation**: Added comprehensive technical docstrings to the `delta.py` module.
 
