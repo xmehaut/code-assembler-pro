@@ -2,13 +2,13 @@
 Utility functions for Code Assembler Pro.
 
 This module provides helper functions for path normalization,
-string formatting, and other common operations.
+string formatting, clipboard operations, and other common tasks.
 """
 
-import fnmatch
-import platform
 import re
+import fnmatch
 import subprocess
+import platform
 from pathlib import Path, PurePosixPath
 from typing import List
 
@@ -22,7 +22,6 @@ def normalize_path(path: str) -> str:
     """
     if not path:
         return ""
-
     # Convert to forward slashes and lowercase, strip trailing slash
     return str(PurePosixPath(path)).replace("\\", "/").lower().rstrip("/")
 
@@ -37,11 +36,6 @@ def slugify_path(path: str) -> str:
 def should_exclude(path: str, exclude_patterns: List[str]) -> bool:
     """
     Determine if a path should be excluded based on patterns.
-
-    Matching rules:
-    - Exact segment match: pattern "dist" matches dir/segment "dist" but NOT "redistribute"
-    - Glob patterns: "*.pyc" matches any .pyc file, "test_*" matches files starting with test_
-    - Path patterns (with /): matched against the full normalized path
     """
     if not exclude_patterns:
         return False
@@ -66,16 +60,11 @@ def should_exclude(path: str, exclude_patterns: List[str]) -> bool:
 
         # Simple pattern — match against each path segment
         for part in path_parts:
-            # Exact segment match (e.g. "dist" matches "dist" not "redistribute")
             if part == clean_pattern:
                 return True
-
-            # Glob match (e.g. "*.pyc" matches "foo.pyc", "test_*" matches "test_main.py")
             if ("*" in clean_pattern or "?" in clean_pattern):
                 if fnmatch.fnmatch(part, clean_pattern):
                     return True
-
-            # Extension match (e.g. ".pyc" matches any file ending with .pyc)
             if clean_pattern.startswith(".") and part.endswith(clean_pattern):
                 return True
 
@@ -127,22 +116,29 @@ def count_lines(text: str) -> int:
 def copy_to_clipboard(text: str) -> bool:
     """
     Copy text to the system clipboard without external dependencies.
-    Supports Windows, macOS, and Linux (requires xclip or xsel).
+    Handles Unicode characters correctly on Windows, macOS, and Linux.
     """
     system = platform.system()
     try:
         if system == "Windows":
-            # Windows native 'clip' command
-            subprocess.run("clip", input=text, text=True, check=True)
+            # 1. On force PowerShell à interpréter l'entrée (stdin) en UTF8
+            # 2. On utilise Out-String pour s'assurer que le flux est traité comme une chaîne unique
+            # 3. On utilise l'encodage 'utf-8' côté Python
+            command = [
+                "powershell", "-NoProfile", "-Command",
+                "[Console]::InputEncoding = [System.Text.Encoding]::UTF8; "
+                "$input | Out-String | Set-Clipboard"
+            ]
+            subprocess.run(command, input=text, encoding='utf-8', check=True)
+
         elif system == "Darwin":  # macOS
-            # macOS native 'pbcopy' command
             subprocess.run("pbcopy", input=text, text=True, check=True)
+
         elif system == "Linux":
-            # Linux requires xclip or xsel
             try:
                 subprocess.run(["xclip", "-selection", "clipboard"], input=text, text=True, check=True)
             except FileNotFoundError:
                 subprocess.run(["xsel", "--clipboard", "--input"], input=text, text=True, check=True)
         return True
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
         return False

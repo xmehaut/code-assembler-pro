@@ -99,6 +99,9 @@ unzip -l dist/*.whl | grep j2
 
 # Windows PowerShell
 tar -tf dist\code_assembler_pro-4.4.0.tar.gz | Select-String "j2"
+
+# Liste les fichiers .j2 contenus dans le fichier .whl
+Get-ChildItem dist/*.whl | ForEach-Object { tar -tf $_.FullName } | Select-String "j2"
 ```
 
 The `*.j2` files **must** appear in the list (otherwise the package will crash at runtime).
@@ -112,8 +115,21 @@ twine upload --repository testpypi dist/code_assembler_pro-4.4.0*
 ```
 
 **Test the installation from TestPyPI:**
-```bash
-pip install -i https://test.pypi.org/simple/ code-assembler-pro==4.4.0
+```bash# Créez un dossier temporaire de test
+mkdir test_install
+cd test_install
+
+# Créez un environnement virtuel propre
+python -m venv venv
+.\venv\Scripts\activate
+
+# Installez depuis TestPyPI
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ code-assembler-pro==4.4.0
+
+# Testez une commande
+code-assembler --version
+
+code-assember --help
 ```
 
 ---

@@ -1,12 +1,15 @@
 [project]
 name = "code-assembler-pro"
-version = "4.4.0"
+version = "4.4.1"
 description = "Consolidate your codebase into structured Markdown context for LLMs (Claude, GPT, Gemini)."
 readme = "README.md"
 requires-python = ">=3.9"
+
+# Utilisation de la syntaxe "legacy" pour éviter 'license-expression'
 license = {text = "MIT"}
+
 authors = [
-    {name = "Xavier Mehaut", email = "xavier.mehaute@gmail.com"}
+    {name = "Xavier Mehaut", email = "xavier.mehaut@gmail.com"}
 ]
 keywords = ["llm", "context", "codebase", "markdown", "ai-engineering", "prompt-engineering"]
 
@@ -41,7 +44,8 @@ code-assembler = "code_assembler.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-license-files = ["LICENSE*"]
+# Désactive l'inclusion automatique des fichiers de licence pour éviter 'license-file'
+license-files = []
 
 [tool.setuptools.packages.find]
 where = ["src"]
