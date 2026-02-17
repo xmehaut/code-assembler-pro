@@ -1,3 +1,11 @@
+## [4.4.1] - 2026-02-17
+
+### Fixed
+- **Windows Clipboard Unicode Support**: Switched from legacy `clip.exe` to PowerShell `Set-Clipboard` to correctly handle emojis and special characters without encoding errors.
+- **Clipboard Test Suite**: Updated tests to validate the new PowerShell-based copy logic and UTF-8 encoding.
+- 
+---
+
 ## [4.4.0] - 2026-02-17
 
 ### Added
