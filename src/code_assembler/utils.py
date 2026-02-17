@@ -5,12 +5,12 @@ This module provides helper functions for path normalization,
 string formatting, and other common operations.
 """
 
-import re
 import fnmatch
-from pathlib import Path, PurePosixPath
-from typing import List, Set
-import subprocess
 import platform
+import re
+import subprocess
+from pathlib import Path, PurePosixPath
+from typing import List
 
 from .constants import CHARS_PER_TOKEN
 
@@ -122,7 +122,6 @@ def count_lines(text: str) -> int:
     Count the number of lines in a text.
     """
     return len(text.splitlines())
-
 
 
 def copy_to_clipboard(text: str) -> bool:

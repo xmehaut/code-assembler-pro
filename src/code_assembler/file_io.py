@@ -4,8 +4,9 @@ File I/O operations for Code Assembler Pro.
 This module handles all file reading and encoding detection operations.
 """
 
-import chardet
 from typing import Optional
+
+import chardet
 
 
 def detect_encoding(file_path: str) -> str:

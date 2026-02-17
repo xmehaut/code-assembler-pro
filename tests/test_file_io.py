@@ -1,7 +1,7 @@
-import unittest
+import shutil
 import sys
 import tempfile
-import shutil
+import unittest
 from pathlib import Path
 
 # Add src to path

@@ -9,6 +9,7 @@ from typing import Dict
 
 try:
     from importlib.metadata import version as _get_version
+
     __version__ = _get_version("code-assembler-pro")
 except Exception:
     __version__ = "4.2.1"  # Fallback for dev mode without pip install
@@ -241,6 +242,7 @@ _EMOJI_ICONS = {
     "bulb": "\U0001f4a1",
     "floppy": "\U0001f4be",
     "clipboard": "\U0001f4cb",
+    "recycle": "\u267b\ufe0f",
 }
 
 # ASCII fallbacks for terminals that don't support emoji
@@ -265,6 +267,7 @@ _ASCII_ICONS = {
     "bulb": "[!]",
     "floppy": "[S]",
     "clipboard": "[CLIP]",
+    "recycle": "[REBUILD]",
 }
 
 # Select the right icon set for the current terminal

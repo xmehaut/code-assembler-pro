@@ -1,11 +1,11 @@
 """
 Tests for interactive wizard mode.
 """
-import unittest
 import sys
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+import unittest
 from io import StringIO
+from pathlib import Path
+from unittest.mock import patch
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -121,13 +121,13 @@ class TestInteractiveWizard(unittest.TestCase):
         """Test complete wizard flow."""
         # Mock user inputs for entire flow
         mock_input.side_effect = [
-            '1',      # Current directory
-            '1',      # Python preset
-            'y', 'n', # Use defaults, no custom exclusions
-            '',       # Default output name
-            'n',      # No advanced config
-            'y',      # Confirm assembly
-            'n',      # Don't save config
+            '1',  # Current directory
+            '1',  # Python preset
+            'y', 'n',  # Use defaults, no custom exclusions
+            '',  # Default output name
+            'n',  # No advanced config
+            'y',  # Confirm assembly
+            'n',  # Don't save config
         ]
 
         # Mock file existence check
@@ -181,6 +181,7 @@ class TestInteractiveWizard(unittest.TestCase):
         self.assertIn('.py', extensions)
         self.assertIn('.yaml', extensions)
         self.assertIn('.tsx', extensions)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,8 +1,8 @@
 """
 Tests for configuration module.
 """
-import unittest
 import sys
+import unittest
 from pathlib import Path
 
 # Add src to path

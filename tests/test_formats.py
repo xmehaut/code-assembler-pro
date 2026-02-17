@@ -1,14 +1,15 @@
 """
 Tests for file format detection and syntax highlighting.
 """
-import unittest
 import sys
+import unittest
 from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from code_assembler.formatters import MarkdownFormatter
+
 
 class TestFileFormats(unittest.TestCase):
     def setUp(self):
@@ -42,6 +43,7 @@ class TestFileFormats(unittest.TestCase):
         """Test fallback to 'text' for unknown formats."""
         self.assertEqual(self.formatter._detect_language("data.unknown_ext"), "text")
         self.assertEqual(self.formatter._detect_language("README"), "text")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,8 +5,8 @@ This module handles the transformation of analyzed codebase data into
 structured Markdown, including the generation of a hidden metadata block
 for delta analysis.
 """
-import os
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any

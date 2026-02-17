@@ -1,10 +1,10 @@
-import unittest
-import tempfile
-import shutil
-import time
 import os
-from pathlib import Path
+import shutil
 import sys
+import tempfile
+import time
+import unittest
+from pathlib import Path
 
 # Ajout du src au path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))

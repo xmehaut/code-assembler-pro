@@ -8,14 +8,14 @@ and metadata injection.
 
 import os
 from pathlib import Path
-from typing import List, Tuple, Set, Optional
+from typing import List, Set, Optional
 
-from .config import AssemblerConfig, FileEntry, CodebaseStats
-from .file_io import read_file_content, read_file_head
 from .analyzers import ArchitectureAnalyzer
+from .config import AssemblerConfig, FileEntry, CodebaseStats
+from .constants import README_FILENAMES, EMOJI
+from .file_io import read_file_content, read_file_head
 from .formatters import MarkdownFormatter
 from .utils import should_exclude, get_file_extension, count_lines, estimate_tokens
-from .constants import README_FILENAMES, EMOJI
 
 
 class CodebaseAssembler:

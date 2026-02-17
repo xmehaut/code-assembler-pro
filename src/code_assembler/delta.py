@@ -21,15 +21,16 @@ by using relative paths as unique keys, reconstructed from the execution
 root (CWD).
 """
 
+import json
 import os
 import re
-import json
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Set, Tuple
 
 # Regex simple pour extraire le bloc JSON
 _METADATA_RE = re.compile(r'<!-- CODE_ASSEMBLER_METADATA\s+(.*?)\s+-->', re.DOTALL)
+
 
 def extract_metadata(md_file: str) -> Dict[str, datetime]:
     """Extrait le dictionnaire {chemin: date} du bloc caché."""
@@ -47,12 +48,14 @@ def extract_metadata(md_file: str) -> Dict[str, datetime]:
                 except ValueError:
                     continue
     except Exception:
-        pass # Fichier illisible ou pas de métadonnées
+        pass  # Fichier illisible ou pas de métadonnées
     return result
+
 
 def normalize_key(path: str) -> str:
     """Normalise un chemin (minuscules + slashs)."""
     return str(Path(path)).replace('\\', '/').lower().strip('/')
+
 
 def get_delta(md_file: str, current_files: Set[str]) -> Tuple[Set[str], Set[str], Set[str]]:
     # 1. Charger le snapshot (Fiable à 100%)
@@ -114,6 +117,7 @@ def get_delta(md_file: str, current_files: Set[str]) -> Tuple[Set[str], Set[str]
 
     return modified, added, deleted
 
+
 def _has_changed(abs_path: str, snapshot_dt: datetime) -> bool:
     try:
         current_mtime = datetime.fromtimestamp(os.path.getmtime(abs_path)).replace(second=0, microsecond=0)
@@ -122,17 +126,20 @@ def _has_changed(abs_path: str, snapshot_dt: datetime) -> bool:
     except OSError:
         return True
 
+
 def filter_changed_files(md_file: str, all_files: Set[str]) -> Tuple[Set[str], Set[str]]:
     modified, added, deleted = get_delta(md_file, all_files)
     return modified | added, deleted
 
+
 def format_delta_summary(modified: Set[str], added: Set[str], deleted: Set[str]) -> str:
     lines = []
+
     def _fmt(files, label, icon):
         if not files: return
         count = len(files)
         names = sorted(Path(p).name for p in files)
-        disp = ', '.join(names[:5]) + (f", ... (+{count-5})" if count > 5 else "")
+        disp = ', '.join(names[:5]) + (f", ... (+{count - 5})" if count > 5 else "")
         lines.append(f"> {icon} {label} ({count}): {disp}")
 
     _fmt(modified, "Modified", "✏️ ")

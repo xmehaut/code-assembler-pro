@@ -1,40 +1,38 @@
 # 🏛️ Code Assembler Pro
 
-> **Turn your codebase into structured, LLM-ready context with one command.**
+> **Turn your codebase into structured, LLM-ready context—and rebuild it from AI suggestions.**
 
-![Version](https://img.shields.io/badge/version-4.3.0-blue)
+![Version](https://img.shields.io/badge/version-4.4.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-[![PyPI version](https://badge.fury.io/py/code-assembler-pro.svg)](https://badge.fury.io/py/code-assembler-pro)
-
 
 **Code Assembler Pro** is a high-grade engineering utility designed to bridge the gap between your source code and Large Language Models (Claude, GPT-4o, Gemini, DeepSeek).
 
-It doesn't just concatenate files; it generates a **contextual technical document** optimized for LLM ingestion, preserving project structure, identifying architectural patterns, and managing token limits through intelligent truncation.
+It doesn't just concatenate files; it generates a **contextual technical document** optimized for LLM ingestion, and provides a **reliable rebuild engine** to reconstruct projects from AI-modified Markdown files.
 
 ---
 
 ## 🎯 Why Code Assembler Pro?
 
-Copy-pasting raw files into a chat window leads to context loss (who calls what? where is this file located?).
+Copy-pasting raw files into a chat window leads to context loss. **Code Assembler Pro solves this by:**
 
-**Code Assembler Pro solves this by:**
 1.  **🗺️ Project Mapping:** Automatically generates a clickable Table of Contents and architectural overview.
-2.  **✂️ Smart Token Management:** Estimates token costs and **intelligently truncates** large files (keeping imports and class definitions) instead of ignoring them.
-3.  **🛡️ Noise Filtering:** Automatically excludes binaries, build artifacts (`node_modules`, `venv`), and sensitive secrets.
-4.  **🎨 Jinja2 Templating:** Uses a clean separation between data and presentation for perfectly formatted Markdown.
+2.  **♻️ Bidirectional Workflow:** Use `--rebuild` to turn an AI's Markdown response back into a physical directory structure.
+3.  **⏱️ Token Efficiency:** Use `--since` (Delta Mode) to send only modified files, saving thousands of tokens.
+4.  **✂️ Smart Truncation:** Intelligently truncates large files (keeping imports/classes) instead of ignoring them.
+5.  **🛡️ Metadata Manifest:** Injects a hidden JSON manifest for 100% reliable project reconstruction and change tracking.
 
 ---
 
 ## ✨ Key Features
 
-- **🧠 Architecture Analysis:** Detects design patterns (MVC, API, Testing structures) and provides file distribution stats.
-- **📊 Token Metrics:** Real-time estimation of token count to stay within model limits.
-- **📌 Dual Interface:** Use it as a powerful CLI tool or integrate it as a Python library.
-- **📝 Multi-Language Support:** Syntax highlighting for 50+ extensions (.py, .rs, .ts, .go, .toml, etc.).
-- **📄 Exact Filename Matching:** **(v4.3)** Include files like `Dockerfile`, `Makefile`, `.env` by exact name.
-- **ℹ️ README Integration:** Automatically injects local READMEs into the flow to provide folder-level context to the AI.
-- **🖥️ Cross-Platform:** Works on Windows (PowerShell, cmd), macOS, and Linux with automatic emoji/ASCII adaptation.
+- **♻️ Rebuild Mode (`--rebuild`):** Reconstruct an entire project from a Markdown snapshot. Perfect for applying AI-generated refactors instantly.
+- **⏱️ Delta Mode (`--since`):** Generate updates containing only files modified, added, or deleted since a previous assembly.
+- **📋 Clipboard Integration (`--clip`):** Direct copy to system clipboard for instant ingestion into LLMs.
+- **🧠 Architecture Analysis:** Detects design patterns (MVC, API, Testing) and provides file distribution stats.
+- **📊 Token Metrics:** Real-time estimation of token count to stay within model context windows.
+- **📝 Enhanced Syntax Highlighting:** Support for 50+ extensions including **Jinja2**, **Terraform**, and smart detection for `Dockerfile`, `Makefile`, and `.env`.
+- **🖥️ Cross-Platform:** Native support for Windows, macOS, and Linux with automatic emoji/ASCII adaptation.
 
 ---
 
@@ -52,89 +50,60 @@ cd code-assembler-pro
 pip install -e .
 ```
 
-*Dependencies: `chardet`, `jinja2`.*
-
 ---
 
 ## 💻 Quick Start (CLI)
 
-Once installed, the `code-assembler` command is available globally in your environment.
-
-### 1. Basic Usage
-Consolidate all Python and Markdown files in the current directory:
-
+### 1. Assemble & Copy (The "One-Shot" Workflow)
+Consolidate your code and copy it directly to your clipboard:
 ```bash
-code-assembler . --ext py md
+code-assembler . --ext py md --clip
 ```
 
-### 2. Include special files
-Include `Dockerfile`, `.env`, and Jinja2 templates alongside Python:
-
+### 2. Iterative Update (The "Token-Saver" Workflow)
+Only send what changed since your last assembly:
 ```bash
-code-assembler . --ext py md yml Dockerfile .env .env.j2 .j2
+code-assembler . --ext py --since codebase.md --clip
 ```
 
-### 3. Targeted Usage
-Exclude tests, target a specific source folder, and define a custom output:
-
+### 3. Rebuild from AI (The "Round-Trip" Workflow)
+Restore a project from a Markdown file (e.g., after an AI refactor):
 ```bash
-code-assembler ./src \
-  --ext py js ts \
-  --exclude tests legacy \
-  --output project_context.md
-```
-
-### 4. Save your CLI as a reusable config
-```bash
-code-assembler . --ext py md Dockerfile --exclude tests --save-config my_project.json
-```
-Reuse it later:
-```bash
-code-assembler --config my_project.json
-```
-
-### 5. Show default exclusions
-```bash
-code-assembler --show-excludes
+code-assembler --rebuild refactored_codebase.md --output-dir ./restored_project
 ```
 
 ---
 
-## 🧙‍♂️ Interactive Mode
+## 📖 CLI Options Reference
 
-**Don't want to remember CLI arguments?** Use the interactive wizard!
-
-```bash
-code-assembler --interactive
-# or
-code-assembler -i
-```
-
-The wizard will guide you through:
-1. 📂 **Path selection** — Choose directories or specific files
-2. 📝 **Extension presets** — Python, JS/TS, Rust, Go, Java, C/C++, or custom
-3. 🚫 **Smart exclusions** — Use defaults or add custom patterns
-4. 💾 **Output config** — Name your file, auto-detect conflicts
-5. ⚙️ **Advanced options** — Truncation, recursion, README inclusion
-
-👉 **[Full Interactive Mode Guide](INTERACTIVE_MODE.md)** | **[5-Minute Quickstart](QUICKSTART_INTERACTIVE.md)**
+| Option | Description |
+|--------|-------------|
+| `paths` | Files or directories to analyze |
+| `--ext` / `-e` | Extensions and filenames to include (e.g., `py md Dockerfile`) |
+| `--output` / `-o` | Output file name (default: `codebase.md`) |
+| `--since` / `-s` | **(v4.4)** Delta Mode: Only include changes since this snapshot |
+| `--rebuild` | **(v4.4)** Reconstruct project from a Markdown file |
+| `--output-dir` | **(v4.4)** Target directory for reconstruction |
+| `--clip` / `-k` | **(v4.4)** Copy result directly to clipboard |
+| `--dry-run` | **(v4.4)** Preview rebuild without writing files |
+| `--interactive` / `-i` | Launch the interactive wizard |
+| `--config` / `-c` | Load a JSON configuration file |
+| `--exclude` / `-x` | Patterns to exclude (added to defaults) |
+| `--max-size` | Maximum file size in MB (default: 10.0) |
+| `--version` | Show version and exit |
 
 ---
 
 ## ⚙️ Advanced Configuration (JSON)
 
-For complex projects, use a JSON configuration file for full control:
+For complex projects, use a JSON configuration file:
 
 ```json
 {
   "paths": ["./src", "./infra"],
-  "extensions": [".py", ".ts", ".tsx", ".sql", "Dockerfile", ".env.j2"],
-  "exclude_patterns": [
-    "migrations",
-    "__pycache__",
-    "*.test.ts"
-  ],
-  "output": "full_stack_context.md",
+  "extensions": [".py", ".ts", ".j2", "Dockerfile", ".env"],
+  "exclude_patterns": ["migrations", "__pycache__", "*.test.ts"],
+  "output": "project_context.md",
   "recursive": true,
   "include_readmes": true,
   "max_file_size_mb": 2.0,
@@ -142,49 +111,13 @@ For complex projects, use a JSON configuration file for full control:
   "truncation_limit_lines": 500
 }
 ```
-
-Run it using:
-```bash
-code-assembler --config assembler_config.json
-```
-
-### 📖 CLI Options Reference
-
-| Option | Description |
-|--------|-------------|
-| `paths` | Files or directories to analyze |
-| `--ext` / `-e` | Extensions and filenames to include (e.g., `py md Dockerfile`) |
-| `--output` / `-o` | Output file name (default: `codebase.md`) |
-| `--exclude` / `-x` | Patterns to exclude (added to defaults) |
-| `--config` / `-c` | Load a JSON configuration file |
-| `--interactive` / `-i` | Launch the interactive wizard |
-| `--save-config FILE` | **(v4.3)** Save CLI args as reusable JSON config |
-| `--show-excludes` | **(v4.3)** Display default exclusion patterns |
-| `--no-recursive` | Do not traverse subdirectories |
-| `--no-readmes` | Do not auto-include README files |
-| `--no-default-excludes` | Disable default exclusion patterns |
-| `--max-size` | Maximum file size in MB (default: 10.0) |
-| `--version` | Show version and exit |
-
-### 📖 JSON Configuration Options
-
-| Option | Type | Description | Default |
-|--------|------|-------------|---------|
-| **`paths`** | `List` | Root directories or files to analyze. | **Required** |
-| **`extensions`** | `List` | File extensions and exact filenames (e.g., `[".py", "Dockerfile"]`). | **Required** |
-| **`output`** | `str` | Name of the generated Markdown file. | `"codebase.md"` |
-| **`exclude_patterns`** | `List` | Patterns to ignore (e.g., `"tests"`, `"*.log"`, `"build/"`). | `[]` |
-| **`recursive`** | `bool` | Whether to traverse subdirectories. | `true` |
-| **`include_readmes`** | `bool` | Automatically include `README.md` for folder context. | `true` |
-| **`max_file_size_mb`** | `float` | Size limit before a file is truncated or skipped. | `10.0` |
-| **`truncate_large_files`** | `bool` | If true, cuts large files instead of skipping them. | `true` |
-| **`truncation_limit_lines`** | `int` | Number of lines to keep when truncating. | `500` |
+Run it using: `code-assembler --config assembler_config.json`
 
 ---
 
 ## 📦 Python Library Usage
 
-Integrate the assembler directly into your automation scripts or CI/CD pipelines:
+Integrate the assembler directly into your automation scripts:
 
 ```python
 from code_assembler import assemble_codebase
@@ -194,8 +127,6 @@ markdown_content = assemble_codebase(
     paths=["./src"],
     extensions=[".py", "Dockerfile"],
     output="ai_docs.md",
-    truncate_large_files=True,
-    truncation_limit_lines=200,
     show_progress=True
 )
 
@@ -206,18 +137,18 @@ print(f"Generated context: {len(markdown_content)} characters.")
 
 ## 💡 Recommended Use Cases
 
-### 1. Onboarding & Audit
-> *"Analyze this codebase and summarize the architecture, then list potential technical debt."*
+### 1. Massive Refactoring Loop
+1. Assemble your project: `code-assembler . -e py --clip`
+2. Paste into Claude: *"Refactor this project to use Pydantic v2."*
+3. Save Claude's response as `refactor.md`.
+4. Apply changes: `code-assembler --rebuild refactor.md --output-dir .`
 
-### 2. Massive Refactoring
-> *"I want to migrate this module from `requests` to `httpx`. Here is the relevant code. Propose a migration plan."*
+### 2. Incremental Debugging
+After fixing a bug, send only the delta to the AI to verify the fix without re-sending the whole codebase:
+`code-assembler . -e py --since previous_snapshot.md --clip`
 
-### 3. Complex Debugging
-> *"I have a circular import error between these three files. Find the root cause and fix it."*
-
-### 4. Infrastructure as Code
-> *"Review my Docker + Kubernetes setup and suggest improvements."*
-Include `Dockerfile`, `.yml`, `.env.j2` in your extensions.
+### 3. Infrastructure Audit
+Include `Dockerfile`, `Makefile`, and `.tf` files to give the AI a full view of your deployment stack.
 
 ---
 
@@ -227,16 +158,8 @@ Contributions are welcome!
 1. Fork the Project.
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`).
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push to the Branch (`git push origin feature/AmazingFeature`).
+4. Push to the Branch.
 5. Open a Pull Request.
-
-### Development Setup
-```bash
-git clone https://github.com/xmehaut/code-assembler-pro.git
-cd code-assembler-pro
-pip install -e ".[dev]"
-pytest tests/ -v
-```
 
 ---
 
@@ -246,4 +169,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
-**Code Assembler Pro** — *Give your AI the context it deserves.*
+**Code Assembler Pro** — *Give your AI the context it deserves, then take the code back.* 🚀

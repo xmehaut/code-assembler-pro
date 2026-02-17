@@ -2,22 +2,28 @@
 
 ### Added
 
+- **Rebuild Mode (`--rebuild`)**
+  - Ability to reconstruct a project's entire directory structure and file contents from a Markdown snapshot.
+  - Includes `--output-dir` to specify the restoration target and `--dry-run` for safe previews.
+  - Security features: Blocks path traversal attacks and warns about truncated files.
+- **Clipboard Support (`--clip` / `-k`)**
+  - Direct copy of the generated Markdown to the system clipboard for immediate ingestion into LLMs.
+  - Cross-platform support (Windows, macOS, Linux) without external dependencies.
 - **Reliable Delta Mode (`--since`)**
-  - Ability to generate a Markdown update containing only files modified, added, or deleted since a previous snapshot.
-  - Drastically reduces token usage for iterative LLM sessions by sending only changes.
+  - Incremental updates: generate Markdown containing only files modified, added, or deleted since a previous snapshot.
+  - Uses a new hidden Metadata Manifest for 100% accuracy.
 - **Hidden Metadata Injection**
   - Injects a hidden JSON block (`<!-- CODE_ASSEMBLER_METADATA -->`) at the end of generated files.
-  - Stores exact relative paths and modification timestamps (mtime) for 100% reliable change detection.
+  - Stores exact relative paths and modification timestamps (mtime) for reliable delta and rebuild operations.
 - **Enhanced Syntax Highlighting**
   - Added support for **Jinja2 templates** (`.j2`, `.jinja`, `.jinja2`).
   - Added support for modern formats: **HCL/Terraform** (`.tf`), **Astro**, **Prisma**, and **GraphQL**.
   - Smart detection for extensionless files: `Dockerfile`, `Makefile`, `Procfile`, and `.env` files now get proper syntax highlighting.
-- **New Test Suites**
-  - `tests/test_delta_scenario.py`: Validates complex delta scenarios and cross-platform path handling.
-  - `tests/test_formats.py`: Validates language detection logic and syntax highlighting tags.
-- **Clipboard Support (`--clip` / `-k`)**
-  - Direct copy of the generated Markdown to the system clipboard.
-  - Cross-platform support (Windows, macOS, Linux) with no extra dependencies.
+- **Comprehensive Test Suite**
+  - `tests/test_rebuild.py`: Validates project reconstruction and security boundaries.
+  - `tests/test_clipboard.py`: Validates cross-platform clipboard commands and CLI integration.
+  - `tests/test_delta_scenario.py`: Validates complex delta scenarios and duplicate filenames.
+  - `tests/test_formats.py`: Validates language detection logic.
 
 ### Fixed
 
@@ -25,16 +31,17 @@
   - Fixed a critical bug where Windows backslashes (`\`) and case sensitivity caused delta mismatches.
   - All internal keys are now normalized to lowercase with POSIX forward slashes (`/`).
 - **Regex Parsing Fragility**
-  - Replaced the experimental visual TOC parsing with structured JSON metadata to avoid errors caused by indentation or date formatting changes.
+  - Replaced experimental visual TOC parsing with structured JSON metadata to avoid errors caused by indentation or date formatting changes.
 
 ### Changed
 
-- **`delta.py` Refactor**: Completely rewritten to prioritize metadata-based analysis.
+- **`cli.py` Refactor**: Completely rewritten to support multiple execution modes (Assembly, Rebuild, Interactive).
+- **`rebuilder.py`**: New module dedicated to project reconstruction.
+- **`delta.py` Refactor**: Rewritten to prioritize metadata-based analysis.
 - **`formatters.py` Refactor**: 
-  - Isolated language detection into a dedicated `_detect_language` method for better testability.
+  - Isolated language detection into a dedicated `_detect_language` method.
   - Updated to handle JSON metadata generation and injection.
-- **`core.py`**: Integrated the delta filtering pipeline and metadata block generation into the main assembly flow.
-- **Module Documentation**: Added comprehensive technical docstrings to the `delta.py` module.
+- **Module Documentation**: Added comprehensive technical docstrings to `delta.py`, `rebuilder.py`, and `cli.py`.
 
 ---
 

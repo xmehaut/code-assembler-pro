@@ -1,6 +1,6 @@
-# 🚀 Interactive Mode — 5-Minute Quickstart
+# 🚀 Interactive Mode — 5-Minute Quickstart (v4.4.0)
 
-Get started with Code Assembler Pro's interactive wizard in under 5 minutes!
+Get started with Code Assembler Pro's interactive wizard and the new **Round-Trip workflow** in under 5 minutes!
 
 ---
 
@@ -15,52 +15,17 @@ code-assembler -i
 ## Step 2: Follow the Prompts
 
 ### 📂 Choose What to Analyze
-
-```
-Your choice [1-3]: 1
-```
-**Tip:** Start with option 1 (current directory) for simplicity.
-
----
+**Choice [1]**: Current directory (`.`) is usually the best start.
 
 ### 📝 Pick Your File Types
-
-```
-Your choice [1-8]: 2
-```
-**Recommended presets:**
-- **Option 1**: Pure Python projects
-- **Option 2**: Python with docs/config (most common)
-- **Option 3**: JavaScript/TypeScript projects
-- **Option 8**: Custom — include `Dockerfile`, `.env`, etc.
-
----
+**Choice [2]**: Python + Config + Docs (includes `.py`, `.md`, `.toml`, `.yaml`, and now `.j2`).
+**Choice [8]**: Custom — to include specific files like `Dockerfile`, `Makefile`, or `.tf`.
 
 ### 🚫 Exclusions
-
-```
-Use default exclusions? [Y/n]: y
-Add custom exclusion patterns? [y/N]: n
-```
-**Tip:** Always accept defaults unless you need something specific. Use `code-assembler --show-excludes` to see what's excluded by default.
-
----
+**Use defaults? [Y]**: Always say **Yes** to filter out noise like `node_modules` or `.venv`.
 
 ### 💾 Name Your Output
-
-```
-Output filename [default: codebase.md]:
-```
-**Tip:** Press Enter to use the default name.
-
----
-
-### ⚙️ Advanced Options
-
-```
-Configure advanced options? [y/N]: n
-```
-**Tip:** Skip advanced options on first run. Defaults are sensible.
+**Default**: `codebase.md`. In v4.4, this file now automatically includes a **Hidden Metadata Manifest** for reliable project restoration.
 
 ---
 
@@ -70,118 +35,65 @@ Configure advanced options? [y/N]: n
 [>>] Start assembly? [Y/n]: y
 ```
 
-That's it! Your `codebase.md` is ready to share with an LLM.
+---
+
+## 🎯 The v4.4 "Round-Trip" Workflow
+
+Once your `codebase.md` is generated, here is how to use the new pro features:
+
+### 1. Copy to AI (Instant)
+Instead of manual copy-pasting, use the built-in clipboard flag:
+```bash
+code-assembler . --ext py --clip
+```
+*Then simply paste (`Ctrl+V`) into Claude or ChatGPT.*
+
+### 2. Update with Delta (Token Saver)
+When you modify your code, don't resend the whole project. Send only the changes:
+```bash
+code-assembler . --ext py --since codebase.md --clip
+```
+
+### 3. Apply AI Changes (Rebuild)
+If the AI provides a refactored version of your project in Markdown, save it as `refactor.md` and restore it instantly:
+```bash
+code-assembler --rebuild refactor.md --output-dir ./restored_project
+```
 
 ---
 
 ## 💡 What You Get
 
 ```
-codebase.md (Ready for Claude/GPT!)
+codebase.md (LLM-Ready Context)
 ├── 📋 Header (timestamp, stats, TOC)
-├── 🏛 Architecture Analysis
+├── 🏛 Architecture Analysis & Patterns
 ├── 📊 Statistics Table
-├── 💬 Recommended Prompts
-└── 📄 Full Source Code (organized by folder)
-```
-
----
-
-## 🎯 Next Steps
-
-### Copy to Claude/GPT
-```bash
-# On macOS
-cat codebase.md | pbcopy
-
-# On Linux
-cat codebase.md | xclip -selection clipboard
-
-# On Windows
-type codebase.md | clip
-```
-
-Then paste into your LLM chat!
-
-### Save Your Configuration
-When prompted:
-```
-[S] Save this configuration for future use? [y/N]: y
-```
-
-Or save directly from the CLI:
-```bash
-code-assembler . --ext py md --save-config my_config.json
-```
-
-Reuse it later:
-```bash
-code-assembler --config my_config.json
+├── 📄 Full Source Code (with enhanced syntax highlighting)
+└── 🔒 Hidden Metadata Manifest (for Rebuild & Delta)
 ```
 
 ---
 
 ## 🔥 Pro Tips
 
-### 1. Start Small
-Test on a small project first to understand the output format.
-
-### 2. Use Presets
-The extension presets (Step 2) are tailored for common project types.
-
-### 3. Include Infrastructure Files
-For DevOps/MLOps projects, use custom selection (option 8) and add:
-```
-Extensions: .py .yml .sh Dockerfile Makefile .env.j2
-```
-
-### 4. Check Token Count
-Look at the **Estimated Tokens** in the stats. Most LLMs have limits:
-- GPT-4o: 128,000 tokens
-- Claude 3.5 / 4: 200,000 tokens
-- Gemini 1.5 Pro: 1,000,000 tokens
-
-### 5. Truncate Large Files
-If your project has huge files (>1000 lines), enable truncation:
-```
-Truncate large files instead of skipping? [Y/n]: y
-Keep first N lines when truncating [default: 500]: 300
-```
-
-This keeps imports and key definitions while reducing token usage.
-
-### 6. See What's Excluded
-```bash
-code-assembler --show-excludes
-```
+1. **Clipboard Shortcut**: Use `-k` as a shortcut for `--clip`.
+2. **Jinja2 Support**: Templates (`.j2`, `.jinja`) are now natively recognized for better AI understanding.
+3. **Check Token Count**: Look at the **Estimated Tokens** in the stats to ensure you stay within your LLM's context window (e.g., 200k for Claude 3.5).
+4. **Smart Truncation**: If your project is huge, enable truncation in "Advanced Options" to keep only the first 500 lines of large files.
 
 ---
 
 ## ❓ Common Questions
 
-**Q: Can I run it on the same project multiple times?**
-A: Yes! It will ask to overwrite or suggest a new filename.
+**Q: How do I get my code back from the Markdown file?**
+A: Use the `--rebuild` command. It uses the hidden JSON metadata to recreate your exact folder structure.
 
-**Q: What if I make a mistake during the wizard?**
-A: Press `Ctrl+C` to cancel and start over. No harm done!
+**Q: Does the clipboard feature work on Linux?**
+A: Yes, but ensure you have `xclip` or `xsel` installed. It works natively on Windows and macOS.
 
 **Q: Can I skip the wizard next time?**
-A: Yes! Save your config and use: `code-assembler --config your_config.json`
-
-**Q: Does it work on Windows?**
-A: Absolutely! The wizard is cross-platform. On legacy PowerShell, emoji are replaced with ASCII markers.
-
-**Q: How do I include `Dockerfile` or `Makefile`?**
-A: Just add them as-is: `--ext py md Dockerfile Makefile`. They're matched by exact filename.
-
----
-
-## 🎓 Learn More
-
-- **Full Guide:** [INTERACTIVE_MODE.md](INTERACTIVE_MODE.md)
-- **CLI Reference:** [README.md](README.md)
-- **Examples:** [examples/](examples/)
-- **Changelog:** [CHANGELOG.md](CHANGELOG.md)
+A: Yes! Save your config at the end of the wizard and use: `code-assembler --config your_config.json`
 
 ---
 

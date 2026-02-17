@@ -4,12 +4,9 @@ version = "4.4.0"
 description = "Consolidate your codebase into structured Markdown context for LLMs (Claude, GPT, Gemini)."
 readme = "README.md"
 requires-python = ">=3.9"
-
-# On revient au format "table" pour forcer la compatibilitÃ© Metadata 2.1
 license = {text = "MIT"}
-
 authors = [
-    {name = "Xavier Mehaut", email = "xavier.mehaut@gmail.com"}
+    {name = "Xavier Mehaut", email = "xavier.mehaute@gmail.com"}
 ]
 keywords = ["llm", "context", "codebase", "markdown", "ai-engineering", "prompt-engineering"]
 
@@ -19,7 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    # SUPPRIMÃ‰ : "License :: OSI Approved :: MIT License" (dÃ©prÃ©ciÃ© ici)
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Documentation",
     "Topic :: Text Processing :: Markup :: Markdown",
@@ -40,14 +37,11 @@ Issues = "https://github.com/xmehaut/code-assembler-pro/issues"
 Changelog = "https://github.com/xmehaut/code-assembler-pro/blob/main/CHANGELOG.md"
 
 [project.scripts]
-# This creates the 'code-assembler' command in the terminal after installation
 code-assembler = "code_assembler.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-# On dÃ©sactive la dÃ©tection automatique des fichiers de licence
-# pour Ã©viter que setuptools n'ajoute le champ 'license-file' qui bugue
-license-files = []
+license-files = ["LICENSE*"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
