@@ -1,43 +1,33 @@
 """
-Basic usage example for Code Assembler Pro.
-This script demonstrates a direct function call to consolidate code.
+Basic programmatic usage of Code Assembler Pro.
+Demonstrates how to consolidate code and get the result as a string.
 """
+import os
 import sys
 from pathlib import Path
 
-# Setup path to find code_assembler in the src directory
-current_file = Path(__file__).resolve()
-project_root = current_file.parents[1]
-sys.path.append(str(project_root / "src"))
+# Setup path to find code_assembler if not installed via pip
+current_dir = Path(__file__).resolve().parent
+sys.path.append(str(current_dir.parent / "src"))
 
-try:
-    from code_assembler import assemble_codebase
-except ImportError:
-    print("❌ Error: Could not import 'code_assembler'.")
-    sys.exit(1)
+from code_assembler import assemble_codebase
 
-# Target the project root for this example
-target_dir = project_root
 
-print(f"Analyzing: {target_dir}")
+def run_demo():
+    # On se place mentalement à la racine du projet
+    project_root = Path(__file__).resolve().parents[1]
 
-# Simple assembly with direct arguments
-markdown_content = assemble_codebase(
-    paths=[str(target_dir)],
-    extensions=[".py", ".md", ".toml"],
-    output="example_output.md",
-    exclude_patterns=[
-        "__pycache__",
-        "tests",
-        "examples",
-        ".venv",
-        ".git",
-        "build",
-        "dist"
-    ],
-    truncate_large_files=True,
-    truncation_limit_lines=500
-)
+    # On change le répertoire de travail pour que les chemins dans le MD soient propres (src/...)
+    os.chdir(project_root)
 
-print(f"\n✅ Done! Generated file size: {len(markdown_content):,} characters.")
-print(f"💾 Saved to: example_output.md")
+    print(f"🚀 Assembling context from: src/code_assembler")
+
+    markdown_content = assemble_codebase(
+        paths=["src/code_assembler"],  # Chemin relatif propre
+        extensions=[".py"],
+        output="simple_snapshot.md",
+        show_progress=True
+    )
+
+if __name__ == "__main__":
+    run_demo()

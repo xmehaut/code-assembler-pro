@@ -12,7 +12,7 @@ try:
 
     __version__ = _get_version("code-assembler-pro")
 except Exception:
-    __version__ = "4.4.1"  # Fallback for dev mode without pip install
+    __version__ = "4.4.2"  # Fallback for dev mode without pip install
 
 # Language mapping for syntax highlighting
 LANGUAGE_MAP: Dict[str, str] = {

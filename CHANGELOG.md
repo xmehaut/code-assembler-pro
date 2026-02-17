@@ -1,9 +1,27 @@
+# Changelog
+
+## [4.4.2] - 2026-02-17
+
+### Added
+- **Programmatic Rebuild Example**: Added `examples/rebuild_usage.py` to demonstrate project reconstruction via API.
+- **Library Documentation**: Added a dedicated "Python Library Usage" section to the README.
+
+### Fixed
+- **Rebuilder Regex Robustness**: Improved the content extraction logic in `rebuilder.py` to be agnostic of path separators (`/` vs `\`) and flexible with whitespace/newlines in Markdown snapshots.
+- **Path Traversal Security**: Refined the security check to better handle relative paths while maintaining protection against directory traversal attacks.
+- **Example Execution Context**: Fixed path resolution in `examples/` scripts by standardizing the working directory to the project root, ensuring clean metadata generation.
+
+### Changed
+- **Modernized Examples**: Updated `basic_usage.py` and `advanced_config.py` to showcase Delta Mode and string-based returns.
+- **Documentation Polish**: General improvement of CLI and Library documentation for a better developer experience.
+- 
+---
 ## [4.4.1] - 2026-02-17
 
 ### Fixed
 - **Windows Clipboard Unicode Support**: Switched from legacy `clip.exe` to PowerShell `Set-Clipboard` to correctly handle emojis and special characters without encoding errors.
 - **Clipboard Test Suite**: Updated tests to validate the new PowerShell-based copy logic and UTF-8 encoding.
-- 
+
 ---
 
 ## [4.4.0] - 2026-02-17

@@ -2,7 +2,7 @@
 
 > **Turn your codebase into structured, LLM-ready context—and rebuild it from AI suggestions.**
 
-![Version](https://img.shields.io/badge/version-4.4.0-blue)
+![Version](https://img.shields.io/badge/version-4.4.2-blue)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -91,6 +91,41 @@ code-assembler --rebuild refactored_codebase.md --output-dir ./restored_project
 | `--exclude` / `-x` | Patterns to exclude (added to defaults) |
 | `--max-size` | Maximum file size in MB (default: 10.0) |
 | `--version` | Show version and exit |
+
+---
+## 🔌 Programmatic API
+
+Code Assembler Pro can be integrated into your Python pipelines (CI/CD, custom AI agents).
+
+### Basic Assembly
+```python
+from code_assembler import assemble_codebase
+
+markdown = assemble_codebase(
+    paths=["./src"],
+    extensions=[".py", ".js"],
+    output="context.md"
+)
+```
+
+### Incremental Update (Delta Mode)
+```python
+# Only include files changed since 'previous_snapshot.md'
+assemble_codebase(
+    paths=["./src"],
+    extensions=[".py"],
+    since="previous_snapshot.md",
+    output="delta_update.md"
+)
+```
+
+### Project Reconstruction
+```python
+from code_assembler.rebuilder import CodebaseRebuilder
+
+rebuilder = CodebaseRebuilder("ai_response.md", "./new_src")
+rebuilder.rebuild()
+```
 
 ---
 

@@ -42,15 +42,16 @@ class CodebaseRebuilder:
     def _extract_file_content(self, rel_path: str) -> Optional[str]:
         """
         Find and extract the content of a specific file from the Markdown.
-        It looks for the file header and captures the following code block.
+        Robust against path separators and blank lines.
         """
-        # Escape path for regex
-        escaped_path = re.escape(rel_path)
+        # Normaliser le chemin pour la recherche (accepte / et \)
+        normalized_search = re.escape(rel_path).replace(r'\/', r'[\\\/]').replace(r'/', r'[\\\/]')
 
-        # Pattern to find the file header and the code block that follows
-        # It looks for: # `path` followed by any headers, then ```lang\n(content)\n```
+        # Regex améliorée :
+        # \s* après le header pour absorber les lignes vides
+        # [a-z0-9]* pour le langage du bloc
         pattern = re.compile(
-            rf'#+ `.*?{escaped_path}`.*?\n```[a-z0-9]*\n(.*?)\n```',
+            rf'#+ `.*?{normalized_search}`.*?\s+```[a-z0-9]*\n(.*?)\n```',
             re.DOTALL | re.IGNORECASE
         )
 
