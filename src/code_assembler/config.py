@@ -28,6 +28,10 @@ class AssemblerConfig:
         truncation_limit_lines: Number of lines to keep if truncated
         show_progress: Whether to show progress information
         use_default_excludes: Whether to use default exclude patterns
+        compress: If True, reduces files to signatures + docstrings only
+        compress_level: Compression depth — "signatures" keeps function/class
+                        headers and docstrings; "docstrings_only" is reserved
+                        for a future stricter mode.
     """
 
     paths: List[str]
@@ -45,6 +49,10 @@ class AssemblerConfig:
     # Exact filenames to match (e.g. Dockerfile, Makefile, .env)
     exact_filenames: List[str] = field(default_factory=list)
 
+    # --- Compression (v4.5) ---
+    compress: bool = False
+    compress_level: str = "signatures"  # "signatures" | "docstrings_only"
+
     def __post_init__(self):
         """Validate and normalize configuration after initialization."""
         if not self.paths:
@@ -52,9 +60,20 @@ class AssemblerConfig:
         if not self.extensions:
             raise ValueError("At least one extension must be specified")
 
+        # Validate compress_level early so the error is clear
+        valid_levels = {"signatures", "docstrings_only"}
+        if self.compress_level not in valid_levels:
+            raise ValueError(
+                f"compress_level must be one of {valid_levels}, "
+                f"got: '{self.compress_level}'"
+            )
+
         # Separate exact filenames from extensions
         normalized_ext = []
         for ext in self.extensions:
+            # FIX: guard against empty strings — ext[0] would raise IndexError
+            if not ext:
+                continue
             if ext.startswith('.'):
                 # Already has dot: .py, .env, .env.j2 → extension
                 normalized_ext.append(ext)
@@ -96,6 +115,8 @@ class AssemblerConfig:
             "truncation_limit_lines": self.truncation_limit_lines,
             "show_progress": self.show_progress,
             "use_default_excludes": self.use_default_excludes,
+            "compress": self.compress,
+            "compress_level": self.compress_level,
         }
 
 

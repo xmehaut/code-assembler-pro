@@ -11,6 +11,11 @@ New in v4.4.0:
     - --rebuild: Restore project structure from a .md file.
     - --clip: Direct copy to system clipboard.
     - --since: Incremental updates based on previous snapshots.
+
+New in v4.5.0:
+    - --compress / -z: Reduce files to signatures + docstrings only.
+    - --compress-level: Control compression depth.
+    - CLI flags (--compress, --since) now work when combined with --config.
 """
 
 import argparse
@@ -21,9 +26,21 @@ from typing import List, Optional
 from .constants import (
     __version__,
     DEFAULT_MAX_FILE_SIZE_MB,
+    DEFAULT_EXCLUDE_PATTERNS,
     EMOJI
 )
 from .core import assemble_codebase, assemble_from_config
+
+
+def _show_excludes() -> None:
+    """Print the default exclusion patterns to stdout."""
+    print(f"\n{EMOJI['mag']} Default exclusion patterns ({len(DEFAULT_EXCLUDE_PATTERNS)}):\n")
+    for pattern in sorted(DEFAULT_EXCLUDE_PATTERNS):
+        print(f"  - {pattern}")
+    print(
+        f"\nThese are added automatically unless you pass --no-default-excludes.\n"
+        f"Add extra patterns with: --exclude pattern1 pattern2"
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,6 +60,29 @@ def parse_args() -> argparse.Namespace:
     rebuild_group.add_argument("--rebuild", type=str, metavar="MD_FILE", help="Reconstruct project")
     rebuild_group.add_argument("--output-dir", type=str, default="./rebuilt_project", help="Target directory")
     rebuild_group.add_argument("--dry-run", action="store_true", help="Preview rebuild")
+
+    # --- Compression Mode ---
+    compress_group = parser.add_argument_group(
+        "Compression Mode",
+        description=(
+            "Reduce source files to their structural skeleton "
+            "(signatures + docstrings). Python is always supported via stdlib ast. "
+            "Other languages require: pip install tree-sitter tree-sitter-<lang>. "
+            "Works with both direct paths and --config."
+        )
+    )
+    compress_group.add_argument(
+        "--compress", "-z",
+        action="store_true",
+        help="Compress files to signatures and docstrings only"
+    )
+    compress_group.add_argument(
+        "--compress-level",
+        dest="compress_level",
+        default="signatures",
+        choices=["signatures", "docstrings_only"],
+        help="Compression depth (default: signatures)"
+    )
 
     # --- Utility Flags ---
     parser.add_argument("--show-excludes", action="store_true", help="Show default exclusions")
@@ -67,7 +107,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _save_config(args: argparse.Namespace, extensions: List[str]):
+def _save_config(args: argparse.Namespace, extensions: List[str]) -> None:
     """Save CLI arguments as a JSON config file."""
     config = {
         "paths": args.paths,
@@ -77,6 +117,8 @@ def _save_config(args: argparse.Namespace, extensions: List[str]):
         "include_readmes": args.include_readmes,
         "max_file_size_mb": args.max_size,
         "use_default_excludes": args.use_default_excludes,
+        "compress": args.compress,
+        "compress_level": args.compress_level,
     }
     if args.exclude_patterns:
         config["exclude_patterns"] = args.exclude_patterns
@@ -85,14 +127,13 @@ def _save_config(args: argparse.Namespace, extensions: List[str]):
         json.dump(config, f, indent=2, ensure_ascii=False)
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     args = parse_args()
     content: Optional[str] = None
 
     try:
         if args.show_excludes:
-            from .cli import _show_excludes
             _show_excludes()
             return
 
@@ -105,11 +146,30 @@ def main():
             from .rebuilder import CodebaseRebuilder
             rebuilder = CodebaseRebuilder(args.rebuild, args.output_dir, args.dry_run)
             count, errors = rebuilder.rebuild()
+            if errors:
+                print(f"\n{EMOJI['warning']} Rebuild completed with {len(errors)} warning(s):")
+                for err in errors:
+                    print(f"   - {err}")
+            if not args.dry_run:
+                print(f"\n{EMOJI['success']} {count} file(s) reconstructed in: {args.output_dir}")
             return
 
         if args.config:
-            # FIX: Removed args.show_progress check
-            content = assemble_from_config(args.config, since=args.since)
+            # FIX: CLI flags now propagate as overrides into the JSON config path.
+            # Previously --compress (and --since) were silently ignored when
+            # --config was also passed, because assemble_from_config was called
+            # without them.  Now we pass them explicitly; assemble_from_config
+            # merges them on top of the JSON values so CLI always wins.
+            cli_overrides = {}
+            if args.compress:
+                cli_overrides["compress"] = True
+                cli_overrides["compress_level"] = args.compress_level
+
+            content = assemble_from_config(
+                args.config,
+                since=args.since,
+                **cli_overrides,
+            )
         else:
             if not args.paths or not args.extensions:
                 print(f"{EMOJI['error']} Error: Paths and extensions are required.")
@@ -128,6 +188,8 @@ def main():
                 max_file_size_mb=args.max_size,
                 use_default_excludes=args.use_default_excludes,
                 since=args.since,
+                compress=args.compress,
+                compress_level=args.compress_level,
             )
 
         if args.clip and content:

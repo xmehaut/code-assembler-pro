@@ -2,7 +2,7 @@
 
 > **Turn your codebase into structured, LLM-ready context—and rebuild it from AI suggestions.**
 
-![Version](https://img.shields.io/badge/version-4.4.2-blue)
+![Version](https://img.shields.io/badge/version-4.5.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -19,7 +19,7 @@ Copy-pasting raw files into a chat window leads to context loss. **Code Assemble
 1.  **🗺️ Project Mapping:** Automatically generates a clickable Table of Contents and architectural overview.
 2.  **♻️ Bidirectional Workflow:** Use `--rebuild` to turn an AI's Markdown response back into a physical directory structure.
 3.  **⏱️ Token Efficiency:** Use `--since` (Delta Mode) to send only modified files, saving thousands of tokens.
-4.  **✂️ Smart Truncation:** Intelligently truncates large files (keeping imports/classes) instead of ignoring them.
+4.  **✂️ Smart Compression:** Use `--compress` to reduce a dependency's code to signatures + docstrings only — dramatically shrinking token count while preserving full structural context.
 5.  **🛡️ Metadata Manifest:** Injects a hidden JSON manifest for 100% reliable project reconstruction and change tracking.
 
 ---
@@ -28,6 +28,7 @@ Copy-pasting raw files into a chat window leads to context loss. **Code Assemble
 
 - **♻️ Rebuild Mode (`--rebuild`):** Reconstruct an entire project from a Markdown snapshot. Perfect for applying AI-generated refactors instantly.
 - **⏱️ Delta Mode (`--since`):** Generate updates containing only files modified, added, or deleted since a previous assembly.
+- **🗜️ Compression Mode (`--compress`):** Reduce source files to structural skeletons — signatures and docstrings only. Python always works out of the box; other languages use individually installed tree-sitter packages.
 - **📋 Clipboard Integration (`--clip`):** Direct copy to system clipboard for instant ingestion into LLMs.
 - **🧠 Architecture Analysis:** Detects design patterns (MVC, API, Testing) and provides file distribution stats.
 - **📊 Token Metrics:** Real-time estimation of token count to stay within model context windows.
@@ -38,9 +39,30 @@ Copy-pasting raw files into a chat window leads to context loss. **Code Assemble
 
 ## 🚀 Installation
 
-### From PyPI
+### Standard install (no compression)
 ```bash
 pip install code-assembler-pro
+```
+
+### With compression support
+
+Python files are **always supported** via stdlib `ast` — no extra install needed.
+
+For other languages, install the corresponding extra:
+
+```bash
+# JavaScript + TypeScript
+pip install "code-assembler-pro[compress-web]"
+
+# Rust + Go + C + C++
+pip install "code-assembler-pro[compress-systems]"
+
+# A single language
+pip install "code-assembler-pro[compress-js]"
+pip install "code-assembler-pro[compress-rust]"
+
+# Everything
+pip install "code-assembler-pro[compress-all]"
 ```
 
 ### From source (development)
@@ -72,6 +94,16 @@ Restore a project from a Markdown file (e.g., after an AI refactor):
 code-assembler --rebuild refactored_codebase.md --output-dir ./restored_project
 ```
 
+### 4. Compress a Dependency (The "Skeleton" Workflow)
+Generate a lightweight snapshot of a third-party package — full structure, minimal tokens:
+```bash
+# Your own code — full detail
+code-assembler src/ --ext py --output my_package.md
+
+# A dependency — signatures + docstrings only
+code-assembler .venv/lib/some_dep/ --ext py --compress --output dep_skeleton.md
+```
+
 ---
 
 ## 📖 CLI Options Reference
@@ -81,11 +113,13 @@ code-assembler --rebuild refactored_codebase.md --output-dir ./restored_project
 | `paths` | Files or directories to analyze |
 | `--ext` / `-e` | Extensions and filenames to include (e.g., `py md Dockerfile`) |
 | `--output` / `-o` | Output file name (default: `codebase.md`) |
-| `--since` / `-s` | **(v4.4)** Delta Mode: Only include changes since this snapshot |
-| `--rebuild` | **(v4.4)** Reconstruct project from a Markdown file |
-| `--output-dir` | **(v4.4)** Target directory for reconstruction |
-| `--clip` / `-k` | **(v4.4)** Copy result directly to clipboard |
-| `--dry-run` | **(v4.4)** Preview rebuild without writing files |
+| `--since` / `-s` | Delta Mode: Only include changes since this snapshot |
+| `--rebuild` | Reconstruct project from a Markdown file |
+| `--output-dir` | Target directory for reconstruction |
+| `--clip` / `-k` | Copy result directly to clipboard |
+| `--dry-run` | Preview rebuild without writing files |
+| `--compress` / `-z` | **(v4.5)** Compress to signatures + docstrings only |
+| `--compress-level` | **(v4.5)** `signatures` (default) or `docstrings_only` |
 | `--interactive` / `-i` | Launch the interactive wizard |
 | `--config` / `-c` | Load a JSON configuration file |
 | `--exclude` / `-x` | Patterns to exclude (added to defaults) |
@@ -93,6 +127,44 @@ code-assembler --rebuild refactored_codebase.md --output-dir ./restored_project
 | `--version` | Show version and exit |
 
 ---
+
+## 🗜️ Compression Mode — How It Works
+
+`--compress` reduces each file to its structural skeleton. The goal is to give an LLM
+full context about a codebase's shape and API surface without the implementation noise.
+
+```python
+# Original (full file) — ~80 tokens
+def connect(host: str, port: int, timeout: float = 30.0) -> Connection:
+    """Establish a TCP connection to the server."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    sock.connect((host, port))
+    return Connection(sock)
+
+# Compressed — ~15 tokens
+def connect(host: str, port: int, timeout: float = 30.0) -> Connection:
+    """Establish a TCP connection to the server."""
+    ...
+```
+
+**Language support:**
+
+| Language | Requirement |
+|----------|-------------|
+| Python | ✅ Always available (stdlib `ast`) |
+| JavaScript / JSX | `pip install "code-assembler-pro[compress-js]"` |
+| TypeScript / TSX | `pip install "code-assembler-pro[compress-ts]"` |
+| Rust | `pip install "code-assembler-pro[compress-rust]"` |
+| Go | `pip install "code-assembler-pro[compress-go]"` |
+| Java | `pip install "code-assembler-pro[compress-java]"` |
+| C | `pip install "code-assembler-pro[compress-c]"` |
+| C++ | `pip install "code-assembler-pro[compress-cpp]"` |
+
+Missing parsers are reported at startup with the exact install command — other files are passed through unchanged.
+
+---
+
 ## 🔌 Programmatic API
 
 Code Assembler Pro can be integrated into your Python pipelines (CI/CD, custom AI agents).
@@ -108,9 +180,18 @@ markdown = assemble_codebase(
 )
 ```
 
+### Compressed snapshot of a dependency
+```python
+markdown = assemble_codebase(
+    paths=[".venv/lib/requests"],
+    extensions=[".py"],
+    output="requests_skeleton.md",
+    compress=True,
+)
+```
+
 ### Incremental Update (Delta Mode)
 ```python
-# Only include files changed since 'previous_snapshot.md'
 assemble_codebase(
     paths=["./src"],
     extensions=[".py"],
@@ -143,30 +224,12 @@ For complex projects, use a JSON configuration file:
   "include_readmes": true,
   "max_file_size_mb": 2.0,
   "truncate_large_files": true,
-  "truncation_limit_lines": 500
+  "truncation_limit_lines": 500,
+  "compress": false,
+  "compress_level": "signatures"
 }
 ```
 Run it using: `code-assembler --config assembler_config.json`
-
----
-
-## 📦 Python Library Usage
-
-Integrate the assembler directly into your automation scripts:
-
-```python
-from code_assembler import assemble_codebase
-
-# Configure and execute
-markdown_content = assemble_codebase(
-    paths=["./src"],
-    extensions=[".py", "Dockerfile"],
-    output="ai_docs.md",
-    show_progress=True
-)
-
-print(f"Generated context: {len(markdown_content)} characters.")
-```
 
 ---
 
@@ -178,11 +241,19 @@ print(f"Generated context: {len(markdown_content)} characters.")
 3. Save Claude's response as `refactor.md`.
 4. Apply changes: `code-assembler --rebuild refactor.md --output-dir .`
 
-### 2. Incremental Debugging
-After fixing a bug, send only the delta to the AI to verify the fix without re-sending the whole codebase:
-`code-assembler . -e py --since previous_snapshot.md --clip`
+### 2. Dependency Context (new in v4.5)
+Give the AI full structural context of a library without burning your token budget:
+```bash
+code-assembler .venv/lib/pydantic/ -e py --compress --output pydantic_api.md
+```
 
-### 3. Infrastructure Audit
+### 3. Incremental Debugging
+After fixing a bug, send only the delta to the AI to verify the fix without re-sending the whole codebase:
+```bash
+code-assembler . -e py --since previous_snapshot.md --clip
+```
+
+### 4. Infrastructure Audit
 Include `Dockerfile`, `Makefile`, and `.tf` files to give the AI a full view of your deployment stack.
 
 ---

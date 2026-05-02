@@ -14,6 +14,10 @@ from typing import List
 
 from .constants import CHARS_PER_TOKEN
 
+# Timeout (seconds) for clipboard subprocess calls.
+# Prevents infinite blocking if a clipboard manager hangs.
+_CLIPBOARD_TIMEOUT = 10
+
 
 def normalize_path(path: str) -> str:
     """
@@ -22,21 +26,16 @@ def normalize_path(path: str) -> str:
     """
     if not path:
         return ""
-    # Convert to forward slashes and lowercase, strip trailing slash
     return str(PurePosixPath(path)).replace("\\", "/").lower().rstrip("/")
 
 
 def slugify_path(path: str) -> str:
-    """
-    Convert a file path to a valid HTML anchor identifier.
-    """
+    """Convert a file path to a valid HTML anchor identifier."""
     return re.sub(r'[^a-zA-Z0-9]', '_', path).lower()
 
 
 def should_exclude(path: str, exclude_patterns: List[str]) -> bool:
-    """
-    Determine if a path should be excluded based on patterns.
-    """
+    """Determine if a path should be excluded based on patterns."""
     if not exclude_patterns:
         return False
 
@@ -49,7 +48,6 @@ def should_exclude(path: str, exclude_patterns: List[str]) -> bool:
 
         clean_pattern = pattern.lower().rstrip("/")
 
-        # Path-based pattern (contains /)
         if "/" in clean_pattern or "\\" in clean_pattern:
             pattern_norm = normalize_path(clean_pattern)
             if path_norm == pattern_norm:
@@ -58,11 +56,10 @@ def should_exclude(path: str, exclude_patterns: List[str]) -> bool:
                 return True
             continue
 
-        # Simple pattern — match against each path segment
         for part in path_parts:
             if part == clean_pattern:
                 return True
-            if ("*" in clean_pattern or "?" in clean_pattern):
+            if "*" in clean_pattern or "?" in clean_pattern:
                 if fnmatch.fnmatch(part, clean_pattern):
                     return True
             if clean_pattern.startswith(".") and part.endswith(clean_pattern):
@@ -72,16 +69,12 @@ def should_exclude(path: str, exclude_patterns: List[str]) -> bool:
 
 
 def estimate_tokens(text: str) -> int:
-    """
-    Estimate the number of tokens in a text (~4 chars per token).
-    """
+    """Estimate the number of tokens in a text (~4 chars per token)."""
     return len(text) // CHARS_PER_TOKEN
 
 
 def format_file_size(size_bytes: int) -> str:
-    """
-    Format a file size in human-readable format.
-    """
+    """Format a file size in human-readable format."""
     if size_bytes == 0:
         return "0B"
     size = float(size_bytes)
@@ -93,23 +86,17 @@ def format_file_size(size_bytes: int) -> str:
 
 
 def format_number(num: int) -> str:
-    """
-    Format a number with thousands separators.
-    """
+    """Format a number with thousands separators."""
     return f"{num:,}"
 
 
 def get_file_extension(path: str) -> str:
-    """
-    Get the file extension from a path.
-    """
+    """Get the file extension from a path."""
     return Path(path).suffix
 
 
 def count_lines(text: str) -> int:
-    """
-    Count the number of lines in a text.
-    """
+    """Count the number of lines in a text."""
     return len(text.splitlines())
 
 
@@ -121,24 +108,43 @@ def copy_to_clipboard(text: str) -> bool:
     system = platform.system()
     try:
         if system == "Windows":
-            # 1. On force PowerShell à interpréter l'entrée (stdin) en UTF8
-            # 2. On utilise Out-String pour s'assurer que le flux est traité comme une chaîne unique
-            # 3. On utilise l'encodage 'utf-8' côté Python
             command = [
                 "powershell", "-NoProfile", "-Command",
                 "[Console]::InputEncoding = [System.Text.Encoding]::UTF8; "
                 "$input | Out-String | Set-Clipboard"
             ]
-            subprocess.run(command, input=text, encoding='utf-8', check=True)
+            subprocess.run(
+                command, input=text, encoding='utf-8',
+                check=True, timeout=_CLIPBOARD_TIMEOUT
+            )
 
         elif system == "Darwin":  # macOS
-            subprocess.run("pbcopy", input=text, text=True, check=True)
+            subprocess.run(
+                "pbcopy", input=text, text=True,
+                check=True, timeout=_CLIPBOARD_TIMEOUT
+            )
 
         elif system == "Linux":
+            # FIX: previously only fell back to xsel on FileNotFoundError.
+            # If xclip is installed but fails (no DISPLAY, permission, etc.),
+            # CalledProcessError was caught by the outer except, returning False
+            # without ever trying xsel. Now ANY failure from xclip triggers xsel.
             try:
-                subprocess.run(["xclip", "-selection", "clipboard"], input=text, text=True, check=True)
-            except FileNotFoundError:
-                subprocess.run(["xsel", "--clipboard", "--input"], input=text, text=True, check=True)
+                subprocess.run(
+                    ["xclip", "-selection", "clipboard"],
+                    input=text, text=True,
+                    check=True, timeout=_CLIPBOARD_TIMEOUT
+                )
+            except (FileNotFoundError, subprocess.CalledProcessError,
+                    subprocess.TimeoutExpired):
+                subprocess.run(
+                    ["xsel", "--clipboard", "--input"],
+                    input=text, text=True,
+                    check=True, timeout=_CLIPBOARD_TIMEOUT
+                )
+
         return True
-    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+
+    except (subprocess.CalledProcessError, FileNotFoundError,
+            subprocess.TimeoutExpired, OSError):
         return False

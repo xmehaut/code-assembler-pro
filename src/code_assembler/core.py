@@ -8,7 +8,7 @@ and metadata injection.
 
 import os
 from pathlib import Path
-from typing import List, Set, Optional
+from typing import List, Optional, Set
 
 from .analyzers import ArchitectureAnalyzer
 from .config import AssemblerConfig, FileEntry, CodebaseStats
@@ -38,9 +38,15 @@ class CodebaseAssembler:
         self.content_buffer: List[str] = []
         self.formatter = MarkdownFormatter()
 
+        # Compression (v4.5) — initialised once so parsers load a single time
+        self.compressor = None
+        if config.compress:
+            from .compressor import CodeCompressor
+            self.compressor = CodeCompressor(config.extensions)
+
     def _collect_all_files(self) -> Set[str]:
-        """Collect all candidate files from configured paths without processing them."""
-        result = set()
+        """Collect all candidate files without processing them."""
+        result: Set[str] = set()
         for path in self.config.paths:
             if not os.path.exists(path):
                 continue
@@ -80,8 +86,8 @@ class CodebaseAssembler:
         """
         Process a single file and add its content to the buffer.
         Handles large files by truncating them if configured.
+        When compression is active, reduces content to signatures + docstrings.
         """
-        # Apply delta filter if active
         if self.since_filter is not None and os.path.abspath(file_path) not in self.since_filter:
             return False
 
@@ -117,6 +123,10 @@ class CodebaseAssembler:
             self.stats.skip_file(file_path, "read error")
             return False
 
+        # Compression injection — skipped for truncated files to avoid double-mangling
+        if self.compressor is not None and not is_truncated:
+            content = self.compressor.compress(content, file_path)
+
         line_count = count_lines(content)
         md_block = self.formatter.format_file_block(
             file_path=file_path, content=content, depth=depth,
@@ -132,7 +142,8 @@ class CodebaseAssembler:
         ))
 
         if self.config.show_progress and not is_truncated:
-            print(f"  {EMOJI['success']} {Path(file_path).name} ({line_count:,} lines)")
+            compress_tag = " [compressed]" if self.compressor else ""
+            print(f"  {EMOJI['success']} {Path(file_path).name} ({line_count:,} lines{compress_tag})")
 
         return True
 
@@ -177,8 +188,6 @@ class CodebaseAssembler:
 
     def assemble(self) -> str:
         """Assemble the complete codebase into a single Markdown string."""
-
-        # Handle Delta Mode
         delta_summary = ""
         if self.since and os.path.exists(self.since):
             from .delta import filter_changed_files, get_delta, format_delta_summary
@@ -193,7 +202,8 @@ class CodebaseAssembler:
                 print(f"\n{EMOJI['mag']} Delta mode: {len(files_to_assemble)} file(s) changed")
 
         if self.config.show_progress:
-            print(f"\n{EMOJI['rocket']} Starting assembly...\n")
+            compress_info = f" (compress={self.config.compress_level})" if self.config.compress else ""
+            print(f"\n{EMOJI['rocket']} Starting assembly{compress_info}...\n")
 
         for path in self.config.paths:
             if not os.path.exists(path):
@@ -204,7 +214,6 @@ class CodebaseAssembler:
             elif os.path.isdir(path):
                 self.process_directory(path)
 
-        # Finalize statistics and formatting
         full_content = "".join(self.content_buffer)
         self.stats.total_chars = len(full_content)
         self.stats.estimated_tokens = estimate_tokens(full_content)
@@ -214,12 +223,10 @@ class CodebaseAssembler:
         archi_data = analyzer.analyze_data()
         architecture_md = self.formatter.render("components/architecture.md.j2", archi_data)
 
-        # Generate Header with optional delta summary
         header = self.formatter.generate_header(self.stats, self.config, toc, architecture_md)
         if delta_summary:
             header = header.replace("---", f"{delta_summary}\n\n---", 1)
 
-        # Generate hidden metadata for future delta analysis
         metadata_block = self.formatter.generate_metadata_block(self.toc_entries)
 
         if self.config.show_progress:
@@ -236,6 +243,8 @@ class CodebaseAssembler:
         print(f"   {EMOJI['mag']} Lines: {format_number(self.stats.total_lines)}")
         print(f"   {EMOJI['floppy']} Size: {format_file_size(self.stats.total_chars)}")
         print(f"   {EMOJI['target']} Tokens: ~{format_number(self.stats.estimated_tokens)}")
+        if self.config.compress:
+            print(f"   {EMOJI['recycle']} Compression: {self.config.compress_level}")
 
 
 def assemble_codebase(
@@ -260,7 +269,9 @@ def assemble_codebase(
 
     assembler = CodebaseAssembler(config, since=since)
     content = assembler.assemble()
-    write_file_content(output, content)
+
+    if not write_file_content(output, content):
+        raise OSError(f"Failed to write output file: {output}")
 
     if config.show_progress:
         print(f"\n{EMOJI['floppy']} Saved: {output}\n")
@@ -268,15 +279,35 @@ def assemble_codebase(
     return content
 
 
-def assemble_from_config(config_file: str, since: Optional[str] = None) -> str:
-    """Assemble codebase using a JSON configuration file."""
+def assemble_from_config(
+        config_file: str,
+        since: Optional[str] = None,
+        **cli_overrides
+) -> str:
+    """
+    Assemble codebase using a JSON configuration file.
+
+    CLI flags passed as keyword arguments take precedence over values
+    in the JSON config file. This allows combining --config with flags
+    like --compress without modifying the config file.
+
+    Example:
+        assemble_from_config("config.json", since="prev.md", compress=True)
+    """
     import json
     with open(config_file, 'r', encoding='utf-8') as f:
         config_data = json.load(f)
 
+    # Normalise output key
     if 'output_file' in config_data and 'output' not in config_data:
         config_data['output'] = config_data.pop('output_file')
     elif 'output_file' in config_data:
         config_data.pop('output_file')
+
+    # CLI overrides win over JSON values — only apply truthy/explicit values
+    # so that a bare --compress=False doesn't accidentally disable JSON compress:true
+    for key, value in cli_overrides.items():
+        if value is not None:
+            config_data[key] = value
 
     return assemble_codebase(since=since, **config_data)

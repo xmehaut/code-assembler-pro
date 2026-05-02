@@ -17,23 +17,11 @@ class ArchitectureAnalyzer:
     """Analyzes codebase structure and detects patterns, returning raw data."""
 
     def __init__(self, entries: List[FileEntry], stats: CodebaseStats):
-        """
-        Initialize analyzer.
-
-        Args:
-            entries: List of file entries
-            stats: Codebase statistics
-        """
         self.entries = entries
         self.stats = stats
 
     def analyze_data(self) -> Dict[str, Any]:
-        """
-        Perform complete architecture analysis and return raw data.
-        """
-        # Calculate depth distribution first to update self.stats.max_depth
         depth_dist = self._get_depth_distribution()
-
         return {
             "components": self._get_components(),
             "distribution": self._get_distribution(),
@@ -47,16 +35,19 @@ class ArchitectureAnalyzer:
         if not self.entries:
             return []
 
-        # Find the common path to determine the root
+        # FIX: os.path.commonpath raises ValueError on Windows when paths span
+        # multiple drives (e.g. C:\ and D:\). Fall back gracefully to CWD.
         all_paths = [Path(e.path) for e in self.entries]
-        root_path = Path(os.path.commonpath([str(p) for p in all_paths]))
+        try:
+            root_path = Path(os.path.commonpath([str(p) for p in all_paths]))
+        except ValueError:
+            root_path = Path(os.getcwd())
 
         results = []
-        top_dirs = set()
+        top_dirs: Set[str] = set()
 
         for entry in self.entries:
             try:
-                # Calculate relative path from common root
                 rel_path = Path(entry.path).relative_to(root_path)
                 if len(rel_path.parts) > 1:
                     top_dirs.add(rel_path.parts[0])
@@ -64,7 +55,6 @@ class ArchitectureAnalyzer:
                 continue
 
         for dir_name in sorted(top_dirs):
-            # Count files belonging to this component
             count = sum(1 for e in self.entries if e.is_file and dir_name in Path(e.path).parts)
             results.append({"name": dir_name, "count": count})
 
@@ -72,7 +62,7 @@ class ArchitectureAnalyzer:
 
     def _get_depth_distribution(self) -> Dict[int, int]:
         """Count files at each directory depth level and sync max_depth."""
-        depth_counts = defaultdict(int)
+        depth_counts: Dict[int, int] = defaultdict(int)
         for e in self.entries:
             if e.is_file:
                 depth_counts[e.depth] += 1
@@ -88,7 +78,6 @@ class ArchitectureAnalyzer:
         if not self.stats.files_by_ext:
             return results
 
-        # Sort by count descending
         sorted_exts = sorted(
             self.stats.files_by_ext.items(),
             key=lambda x: x[1],

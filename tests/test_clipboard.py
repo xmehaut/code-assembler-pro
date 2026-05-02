@@ -33,7 +33,8 @@ class TestClipboard(unittest.TestCase):
                 ],
                 input=test_text,
                 encoding='utf-8',
-                check=True
+                check=True,
+                timeout=10
             )
 
     @patch('subprocess.run')
@@ -43,7 +44,7 @@ class TestClipboard(unittest.TestCase):
             result = copy_to_clipboard("test content")
             self.assertTrue(result)
             mock_run.assert_called_once_with(
-                "pbcopy", input="test content", text=True, check=True
+                "pbcopy", input="test content", text=True, check=True, timeout=10
             )
 
     @patch('subprocess.run')
@@ -54,7 +55,7 @@ class TestClipboard(unittest.TestCase):
             self.assertTrue(result)
             mock_run.assert_called_with(
                 ["xclip", "-selection", "clipboard"],
-                input="test content", text=True, check=True
+                input="test content", text=True, check=True, timeout=10
             )
 
     @patch('code_assembler.cli.parse_args')
@@ -79,7 +80,9 @@ class TestClipboard(unittest.TestCase):
             include_readmes=True,
             use_default_excludes=True,
             max_size=10.0,
-            since=None
+            since=None,
+            compress=False,
+            compress_level="signatures"
         )
         mock_parse.return_value = args
 

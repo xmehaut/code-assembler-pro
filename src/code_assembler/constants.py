@@ -12,7 +12,7 @@ try:
 
     __version__ = _get_version("code-assembler-pro")
 except Exception:
-    __version__ = "4.4.2"  # Fallback for dev mode without pip install
+    __version__ = "4.5.0"  # Fallback for dev mode without pip install
 
 # Language mapping for syntax highlighting
 LANGUAGE_MAP: Dict[str, str] = {
@@ -118,7 +118,7 @@ LANGUAGE_MAP: Dict[str, str] = {
     ".gitattributes": "text",
     ".editorconfig": "ini",
 
-    # Other
+    # Config & misc  (FIX: .properties, .graphql, .gql were duplicated — kept here only)
     ".env": "bash",
     ".properties": "properties",
     ".gradle": "gradle",
@@ -143,13 +143,10 @@ LANGUAGE_MAP: Dict[str, str] = {
     ".terraform": "hcl",
     ".nomad": "hcl",
     ".k8s": "yaml",
-    ".properties": "properties",
 
     # Modern Web & Data
     ".astro": "astro",
     ".prisma": "prisma",
-    ".graphql": "graphql",
-    ".gql": "graphql",
     ".ipynb": "json",
     ".jsonl": "json",
 }
@@ -221,62 +218,54 @@ def _supports_emoji() -> bool:
 
 
 # Emoji icons (using Unicode escapes for encoding safety)
+# FIX: removed duplicate "recycle" key — 🔄 was silently overwritten by ♻️
 _EMOJI_ICONS = {
-    "folder": "\U0001f4c1",
-    "file": "\U0001f4c4",
-    "readme": "\u2139\ufe0f",
-    "success": "\u2705",
-    "warning": "\u26a0\ufe0f",
-    "error": "\u274c",
-    "rocket": "\U0001f680",
-    "chart": "\U0001f4ca",
-    "target": "\U0001f3af",
-    "building": "\U0001f3db\ufe0f",
-    "map": "\U0001f5fa\ufe0f",
-    "book": "\U0001f4d6",
-    "bug": "\U0001f41b",
-    "memo": "\U0001f4dd",
-    "mag": "\U0001f50d",
-    "test": "\U0001f9ea",
-    "recycle": "\U0001f504",
-    "bulb": "\U0001f4a1",
-    "floppy": "\U0001f4be",
-    "clipboard": "\U0001f4cb",
-    "recycle": "\u267b\ufe0f",
+    "folder":    "\U0001f4c1",       # 📁
+    "file":      "\U0001f4c4",       # 📄
+    "readme":    "\u2139\ufe0f",     # ℹ️
+    "success":   "\u2705",           # ✅
+    "warning":   "\u26a0\ufe0f",     # ⚠️
+    "error":     "\u274c",           # ❌
+    "rocket":    "\U0001f680",       # 🚀
+    "chart":     "\U0001f4ca",       # 📊
+    "target":    "\U0001f3af",       # 🎯
+    "building":  "\U0001f3db\ufe0f", # 🏛️
+    "map":       "\U0001f5fa\ufe0f", # 🗺️
+    "book":      "\U0001f4d6",       # 📖
+    "bug":       "\U0001f41b",       # 🐛
+    "memo":      "\U0001f4dd",       # 📝
+    "mag":       "\U0001f50d",       # 🔍
+    "test":      "\U0001f9ea",       # 🧪
+    "recycle":   "\u267b\ufe0f",     # ♻️
+    "bulb":      "\U0001f4a1",       # 💡
+    "floppy":    "\U0001f4be",       # 💾
+    "clipboard": "\U0001f4cb",       # 📋
 }
 
 # ASCII fallbacks for terminals that don't support emoji
+# FIX: removed duplicate "recycle" key — "[R]" was silently overwritten by "[REBUILD]"
 _ASCII_ICONS = {
-    "folder": "[DIR]",
-    "file": "[FILE]",
-    "readme": "[i]",
-    "success": "[OK]",
-    "warning": "[!]",
-    "error": "[X]",
-    "rocket": "[>>]",
-    "chart": "[#]",
-    "target": "[*]",
-    "building": "[B]",
-    "map": "[M]",
-    "book": "[B]",
-    "bug": "[bug]",
-    "memo": "[N]",
-    "mag": "[?]",
-    "test": "[T]",
-    "recycle": "[R]",
-    "bulb": "[!]",
-    "floppy": "[S]",
+    "folder":    "[DIR]",
+    "file":      "[FILE]",
+    "readme":    "[i]",
+    "success":   "[OK]",
+    "warning":   "[!]",
+    "error":     "[X]",
+    "rocket":    "[>>]",
+    "chart":     "[#]",
+    "target":    "[*]",
+    "building":  "[B]",
+    "map":       "[M]",
+    "book":      "[B]",
+    "bug":       "[bug]",
+    "memo":      "[N]",
+    "mag":       "[?]",
+    "test":      "[T]",
+    "recycle":   "[RECYCLE]",
+    "bulb":      "[!]",
+    "floppy":    "[S]",
     "clipboard": "[CLIP]",
-    "recycle": "[REBUILD]",
 }
 
 # Select the right icon set for the current terminal
 EMOJI = _EMOJI_ICONS if _supports_emoji() else _ASCII_ICONS
-
-# Header templates
-HEADER_LEVELS = {
-    "document": 1,
-    "section": 2,
-    "subsection": 3,
-    "file": 2,
-}

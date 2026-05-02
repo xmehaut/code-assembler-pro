@@ -1,11 +1,10 @@
 [project]
 name = "code-assembler-pro"
-version = "4.4.2"
+version = "4.5.1"
 description = "Consolidate your codebase into structured Markdown context for LLMs (Claude, GPT, Gemini)."
 readme = "README.md"
 requires-python = ">=3.9"
 
-# Utilisation de la syntaxe "legacy" pour éviter 'license-expression'
 license = {text = "MIT"}
 
 authors = [
@@ -32,6 +31,63 @@ dependencies = [
     "jinja2>=3.1.0",
 ]
 
+# ---------------------------------------------------------------------------
+# Optional dependencies — Code Compression (--compress / -z)
+#
+# Python files are ALWAYS supported via stdlib ast — no extra install needed.
+# For other languages, install the corresponding tree-sitter package below.
+#
+# tree-sitter >= 0.21 is required (breaking API change vs 0.20).
+# Individual language packages use the new 0.21+ API.
+# ---------------------------------------------------------------------------
+[project.optional-dependencies]
+
+# Single-language installs — pay only for what you use
+compress-js   = ["tree-sitter>=0.21", "tree-sitter-javascript"]
+compress-ts   = ["tree-sitter>=0.21", "tree-sitter-typescript"]
+compress-rust = ["tree-sitter>=0.21", "tree-sitter-rust"]
+compress-go   = ["tree-sitter>=0.21", "tree-sitter-go"]
+compress-java = ["tree-sitter>=0.21", "tree-sitter-java"]
+compress-c    = ["tree-sitter>=0.21", "tree-sitter-c"]
+compress-cpp  = ["tree-sitter>=0.21", "tree-sitter-cpp"]
+compress-rb   = ["tree-sitter>=0.21", "tree-sitter-ruby"]
+compress-php  = ["tree-sitter>=0.21", "tree-sitter-php"]
+compress-cs   = ["tree-sitter>=0.21", "tree-sitter-c-sharp"]
+
+# Bundles — common combinations
+compress-web = [
+    "tree-sitter>=0.21",
+    "tree-sitter-javascript",
+    "tree-sitter-typescript",
+]
+compress-systems = [
+    "tree-sitter>=0.21",
+    "tree-sitter-rust",
+    "tree-sitter-go",
+    "tree-sitter-c",
+    "tree-sitter-cpp",
+]
+
+# Everything — equivalent to the monolithic tree-sitter-languages approach
+# but using individual packages with the modern 0.21+ API
+compress-all = [
+    "tree-sitter>=0.21",
+    "tree-sitter-javascript",
+    "tree-sitter-typescript",
+    "tree-sitter-rust",
+    "tree-sitter-go",
+    "tree-sitter-java",
+    "tree-sitter-c",
+    "tree-sitter-cpp",
+    "tree-sitter-ruby",
+    "tree-sitter-php",
+    "tree-sitter-c-sharp",
+    "tree-sitter-lua",
+    "tree-sitter-swift",
+    "tree-sitter-kotlin",
+    "tree-sitter-scala",
+]
+
 [project.urls]
 Homepage = "https://github.com/xmehaut/code-assembler-pro"
 Documentation = "https://github.com/xmehaut/code-assembler-pro#readme"
@@ -44,7 +100,6 @@ code-assembler = "code_assembler.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-# Désactive l'inclusion automatique des fichiers de licence pour éviter 'license-file'
 license-files = []
 
 [tool.setuptools.packages.find]
