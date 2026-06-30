@@ -25,10 +25,15 @@ code-assembler src/ --ext .py --output codebase.md
 **Modular tree-sitter parsers, not a monolithic dependency.** Optional code
 compression (`--compress`) reduces files to signatures and docstrings only.
 Python is supported out of the box via stdlib `ast` (no extra install).
-Other languages use individual tree-sitter packages resolved dynamically
-from the extensions actually in use — install only what you need
-(`pip install tree-sitter tree-sitter-rust`, etc.) instead of one heavy
-all-languages bundle.
+Other languages use individual tree-sitter packages, installed via named
+extras instead of one heavy all-languages bundle:
+
+```bash
+pip install "code-assembler-pro[compress-web]"      # JS + TS
+pip install "code-assembler-pro[compress-systems]"  # Rust + Go + C + C++
+pip install "code-assembler-pro[compress-js]"        # a single language
+pip install "code-assembler-pro[compress-all]"       # everything
+```
 
 **Reversible: it can rebuild a project from its own output.** Unlike most
 "dump codebase to text" tools, the generated Markdown embeds a hidden
@@ -70,6 +75,13 @@ mandatory.
 If you're asked to add a feature or fix a bug, default to preserving the two
 properties described in Part 1 — modular per-language parsers and
 rebuild reversibility — unless the user explicitly asks to change them.
+
+A v5.x direction is already on the roadmap: exposing this tool as a Claude
+Skill / MCP tool so an agent can trigger it directly rather than going
+through the CLI. Keep this in mind if you're touching the public API
+surface (`assemble_codebase`, `assemble_from_config`, `CodebaseRebuilder`) —
+favor designs that would work cleanly as a callable tool, not just a CLI
+wrapper.
 
 ## Known pitfalls / rules to follow
 
