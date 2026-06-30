@@ -1,5 +1,15 @@
 # Changelog
  
+## [Unreleased]
+
+### Added
+- `AGENTS.md`: guidance file for AI coding agents (Claude, GPT, Cursor,
+  Aider, etc.) working on the repository. Documents the rebuild workflow
+  for consuming generated snapshots (`--rebuild`), known architectural
+  pitfalls (CLI/`--config` override forwarding, tree-sitter as an optional
+  dependency, language detection fallback order, path normalization
+  behavior, Windows multi-drive handling), testing conventions, and current
+  limitations of the compression feature.
 
 ## [4.5.2]
 
