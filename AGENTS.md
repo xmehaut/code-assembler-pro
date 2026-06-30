@@ -119,6 +119,16 @@ On Windows, `commonpath` raises a `ValueError` if the analyzed paths are on
 different drive letters (`C:\` and `D:\`). The current fallback falls back
 to `os.getcwd()` — keep this if you touch `analyzers.py`.
 
+**`--dry-run` : ni écriture de fichiers, ni création du dossier de sortie.**
+`CodebaseRebuilder.rebuild()` n'appelle `output_dir.mkdir()` que si
+`dry_run` est `False`. En mode dry-run, chaque fichier déclenche un simple
+`print("[DRY-RUN] Would create: ...")` et incrémente le compteur, sans
+aucune opération d'I/O — le dossier `output_dir` ne doit pas exister à la
+fin. Si vous ajoutez une étape au pipeline de rebuild (ex. écriture d'un
+rapport, copie d'assets), placez-la après la vérification `if self.dry_run`
+et assurez-vous qu'elle ne déclenche pas de création de répertoire ou de
+fichier. Couvert par `test_dry_run` dans `test_rebuild.py`.
+
 ## Testing conventions
 
 A fixed bug = a regression test added to `tests/test_robustness.py`, named
