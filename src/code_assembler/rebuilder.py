@@ -39,24 +39,72 @@ class CodebaseRebuilder:
         except json.JSONDecodeError:
             return False
 
+    def _find_real_file_headers(self) -> List[Tuple[str, int, int]]:
+        """
+        Scan the whole document once for genuine file-header blocks:
+        a '#+ `path`' line immediately followed (at most one blank line
+        between) by an opening code fence.
+
+        That tight anchoring — no free-form text allowed between the
+        header and the fence — is what filters out prose headings that
+        merely *wrap* an identifier in backticks (e.g. "#### `@Contract.
+        validate` and `self` in tests"), since those are followed by
+        ordinary paragraph text, not directly by a fence. It deliberately
+        does NOT require `path` to be a key in the embedded metadata: some
+        real header blocks are directory-level README context sections
+        (e.g. "#### `behavioral/`" → "##### README context") rather than
+        individual files, and excluding them would make this scan skip
+        over a real document boundary, silently swallowing the README
+        section into whatever file happens to precede it.
+
+        Returns a list of (path, header_start, content_start) ordered by
+        position in the document. Used both to locate a specific file's
+        content and to bound where each block ends (the next entry's start
+        is the bound for the previous one).
+        """
+        header_re = re.compile(
+            r'#+ `([^`]+)`[ \t]*\r?\n(?:[ \t]*\r?\n)?```[a-z0-9]*\r?\n',
+            re.IGNORECASE
+        )
+        return [
+            (m.group(1).strip().replace('\\', '/'), m.start(), m.end())
+            for m in header_re.finditer(self.md_content)
+        ]
+
     def _extract_file_content(self, rel_path: str) -> Optional[str]:
         """
         Find and extract the content of a specific file from the Markdown.
-        Robust against path separators and blank lines.
+        Robust against path separators, blank lines, duplicate filenames at
+        different paths, and nested ``` fences inside the file's own content
+        (a markdown file documenting code blocks, a README showing
+        examples, etc. — see `_find_real_file_headers` for why a single
+        validated scan is used instead of a per-call regex search).
         """
-        # Normaliser le chemin pour la recherche (accepte / et \)
-        normalized_search = re.escape(rel_path).replace(r'\/', r'[\\\/]').replace(r'/', r'[\\\/]')
+        target_normalized = rel_path.replace('\\', '/').strip()
+        headers = self._find_real_file_headers()
 
-        # Regex améliorée :
-        # \s* après le header pour absorber les lignes vides
-        # [a-z0-9]* pour le langage du bloc
-        pattern = re.compile(
-            rf'#+ `.*?{normalized_search}`.*?\s+```[a-z0-9]*\n(.*?)\n```',
-            re.DOTALL | re.IGNORECASE
+        match_index = next(
+            (i for i, (path, _, _) in enumerate(headers) if path == target_normalized),
+            None
         )
+        if match_index is None:
+            return None
 
-        match = pattern.search(self.md_content)
-        return match.group(1) if match else None
+        _, _, content_start = headers[match_index]
+        content_end_bound = (
+            headers[match_index + 1][1] if match_index + 1 < len(headers) else len(self.md_content)
+        )
+        search_zone = self.md_content[content_start:content_end_bound]
+
+        # True closing fence = the LAST bare ``` line in the window, since
+        # earlier ones may be nested fences belonging to the file's own
+        # content rather than the block's real terminator.
+        closing_candidates = list(re.finditer(r'\r?\n```[ \t]*(?:\r?\n|$)', search_zone))
+        if not closing_candidates:
+            return None
+
+        last_closing = closing_candidates[-1]
+        return search_zone[:last_closing.start()]
 
     def rebuild(self) -> Tuple[int, List[str]]:
         """

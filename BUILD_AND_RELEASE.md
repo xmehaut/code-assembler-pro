@@ -45,7 +45,7 @@ pip install -e ".[compress-all]"       # Everything
 
 **Verifications:**
 ```bash
-code-assembler --version          # Should display 4.5.0
+code-assembler --version          # Should display 4.5.2
 code-assembler --show-excludes    # Test a quick command
 code-assembler src/ --ext py --compress --output test_compress.md   # Test compression
 ```
@@ -58,7 +58,7 @@ code-assembler src/ --ext py --compress --output test_compress.md   # Test compr
 pytest tests/ -v
 ```
 
-**All tests must pass before publishing.** Version 4.5.0 adds compression tests:
+**All tests must pass before publishing.** Version 4.5.2 adds compression tests:
 ```
 tests/test_config.py::... PASSED
 tests/test_core.py::... PASSED
@@ -86,7 +86,7 @@ tests/test_compressor.py::... PASSED   # New in v4.5
 In `pyproject.toml`:
 ```toml
 [project]
-version = "4.5.0"
+version = "4.5.2"
 ```
 
 Verify that `code-assembler --version` returns the correct version.
@@ -102,8 +102,8 @@ python -m build
 This generates two files in `dist/`:
 ```
 dist/
-├── code_assembler_pro-4.5.0-py3-none-any.whl
-└── code_assembler_pro-4.5.0.tar.gz
+├── code_assembler_pro-4.5.2-py3-none-any.whl
+└── code_assembler_pro-4.5.2.tar.gz
 ```
 
 **Verify that Jinja2 templates are included:**
@@ -122,7 +122,7 @@ The `*.j2` files **must** appear in the list (otherwise the package will crash a
 ## Step 5 — Publish to TestPyPI
 
 ```bash
-twine upload --repository testpypi dist/code_assembler_pro-4.5.0*
+twine upload --repository testpypi dist/code_assembler_pro-4.5.2*
 ```
 
 **Test the standard installation:**
@@ -132,7 +132,7 @@ python -m venv venv && .\venv\Scripts\activate
 
 pip install --index-url https://test.pypi.org/simple/ \
             --extra-index-url https://pypi.org/simple/ \
-            code-assembler-pro==4.5.0
+            code-assembler-pro==4.5.2
 
 code-assembler --version
 code-assembler --help
@@ -143,7 +143,7 @@ code-assembler --help
 # Install with web compression support
 pip install --index-url https://test.pypi.org/simple/ \
             --extra-index-url https://pypi.org/simple/ \
-            "code-assembler-pro[compress-web]==4.5.0"
+            "code-assembler-pro[compress-web]==4.5.2"
 
 # Verify Python compression (no extra needed)
 code-assembler src/ --ext py --compress --output skeleton.md
@@ -160,11 +160,11 @@ code-assembler src/ --ext js --compress --output skeleton_js.md
 Once TestPyPI validation is successful:
 
 ```bash
-twine upload dist/code_assembler_pro-4.5.0*
+twine upload dist/code_assembler_pro-4.5.2*
 ```
 
 The package will be available at:
-`https://pypi.org/project/code-assembler-pro/4.5.0/`
+`https://pypi.org/project/code-assembler-pro/4.5.2/`
 
 ---
 
@@ -172,8 +172,8 @@ The package will be available at:
 
 ```bash
 git add -A
-git commit -m "feat: v4.5.0 - Code Compression Mode (--compress) with tree-sitter per-language support"
-git tag v4.5.0
+git commit -m "feat: v4.5.2 - Code Compression Mode (--compress) with tree-sitter per-language support"
+git tag v4.5.2
 git push origin main --tags
 ```
 
@@ -184,13 +184,13 @@ git push origin main --tags
 ```
 [ ] 1. pip install -e .
 [ ] 2. pytest tests/ -v              → All tests pass (54+ including new v4.5 compression tests)
-[ ] 3. Update version in pyproject.toml to 4.5.0
+[ ] 3. Update version in pyproject.toml to 4.5.2
 [ ] 4. python -m build               → .whl + .tar.gz in dist/
 [ ] 5. Verify j2 templates inside the .whl
-[ ] 6. twine upload --repository testpypi dist/*4.5.0*
+[ ] 6. twine upload --repository testpypi dist/*4.5.2*
 [ ] 7. Test standard install + test --compress on Python files (no extra needed)
 [ ] 8. Test install with [compress-web] extra + test --compress on .js files
-[ ] 9. twine upload dist/*4.5.0*     → Production PyPI
+[ ] 9. twine upload dist/*4.5.2*     → Production PyPI
 [ ] 10. git commit + tag + push
 ```
 
@@ -211,4 +211,4 @@ git push origin main --tags
 
 ---
 
-*Last updated: v4.5.0 — May 2026*
+*Last updated: v4.5.2 — June 2026*

@@ -12,7 +12,7 @@ New in v4.4.0:
     - --clip: Direct copy to system clipboard.
     - --since: Incremental updates based on previous snapshots.
 
-New in v4.5.0:
+New in v4.5.2:
     - --compress / -z: Reduce files to signatures + docstrings only.
     - --compress-level: Control compression depth.
     - CLI flags (--compress, --since) now work when combined with --config.

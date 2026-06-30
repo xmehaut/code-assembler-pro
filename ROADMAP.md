@@ -4,44 +4,6 @@ Planned features and vision for future versions, ranked by their impact on the d
 
 ---
 
-## ✅ Completed in v4.4.0 — The "Round-Trip" Milestone
-
-We have successfully closed the loop between local code and AI interfaces.
-
-*   **♻️ Rebuild Mode (`--rebuild`)**: Reconstruct an entire project structure from a Markdown snapshot.
-*   **⏱️ Delta Mode (`--since`)**: Incremental updates using a hidden **Metadata Manifest** (JSON) for 100% accuracy.
-*   **📋 Clipboard Support (`--clip`)**: Direct ingestion into LLMs without intermediate files.
-*   **📝 Enhanced Syntax**: Native support for Jinja2, Terraform, and smart detection for `Dockerfile`/`Makefile`.
-*   **🛡️ Metadata Manifest**: Injected JSON block that makes the Markdown file a "self-describing" project container.
-
----
-
-## ✅ Completed in v4.5.0 — The "Skeleton" Milestone
-
-Code compression reduces third-party libraries to pure API surface, dramatically cutting token usage when giving an LLM context about a dependency.
-
-*   **🗜️ Code Compression (`--compress` / `-z`)**: Reduces source files to structural skeletons — signatures and docstrings only, with bodies replaced by `...`. Python always supported via stdlib `ast` (zero extra dependencies). Other languages (JS, TS, Rust, Go, Java, C, C++…) use individually installed `tree-sitter-<lang>` packages.
-*   **Per-language optional extras**: `compress-web`, `compress-systems`, `compress-all` bundles in `pyproject.toml`.
-*   **CLI override on `--config`**: `--compress` and `--since` now work correctly when combined with `--config`, with CLI flags taking precedence over JSON values.
-
----
-
-## ✅ Completed in v4.5.1 — Bug Fix & Robustness Release
-
-Code review identified and fixed several production issues.
-
-*   **`constants.py`**: Removed duplicate keys (`.properties`, `.graphql`, `recycle`). Removed dead code `HEADER_LEVELS`.
-*   **`cli.py`**: Implemented `_show_excludes()` (was referenced but never defined → crash). Rebuild errors now displayed to the user.
-*   **`config.py`**: Guard against empty extension strings (`IndexError` on `ext[0]`). `compress_level` validation.
-*   **`analyzers.py`**: `os.path.commonpath()` now handles Windows multi-drive paths gracefully.
-*   **`delta.py`**: Replaced bare `except Exception: pass` with typed handlers that surface real errors.
-*   **`utils.py`**: Linux clipboard `xsel` fallback now triggers on `CalledProcessError` and `TimeoutExpired`, not only `FileNotFoundError`. Added `timeout=10` to all subprocess calls.
-*   **`core.py`**: `write_file_content()` return value checked — write failures now raise `OSError` instead of silently succeeding.
-*   **`interactive.py`**: Fixed double-application of `DEFAULT_EXCLUDE_PATTERNS` via `use_default_excludes`.
-*   **28 regression tests** added in `test_robustness.py` — one per bug fixed.
-
----
-
 ## 🔴 High Priority — v4.6.0
 
 ### 1. Compression — Edge Cases & Stability
@@ -125,8 +87,8 @@ Automatic regeneration whenever a source file changes.
 | **v4.4.0** | Rebuild Mode (`--rebuild`) | 🔴 Critical | ✅ Done |
 | **v4.4.0** | Delta Mode (`--since`) | 🔴 Critical | ✅ Done |
 | **v4.4.0** | Clipboard Support (`--clip`) | 🔴 High | ✅ Done |
-| **v4.5.0** | Code Compression (`--compress`) | 🔴 High | ✅ Done |
-| **v4.5.0** | Per-language tree-sitter extras | 🟡 Medium | ✅ Done |
+| **v4.5.2** | Code Compression (`--compress`) | 🔴 High | ✅ Done |
+| **v4.5.2** | Per-language tree-sitter extras | 🟡 Medium | ✅ Done |
 | **v4.5.1** | Bug fix & robustness (8 bugs, 28 tests) | 🔴 Critical | ✅ Done |
 | **v4.6.0** | Compression edge cases & stability | 🔴 High | 📋 Planned |
 | **v4.6.0** | 🔒 Secret Scanning (`--scan-secrets`) | 🔴 Critical | 📋 Planned |

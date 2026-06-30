@@ -1,4 +1,37 @@
 # Changelog
+ 
+
+## [4.5.2]
+
+### Fixed
+
+- `rebuilder.py`: `CodebaseRebuilder._extract_file_content()` could silently
+  truncate or misattribute a file's content when reconstructing a project
+  from a Markdown snapshot (`--rebuild`). Three distinct causes, all in the
+  same method:
+  - A non-greedy `(.*?)` capture stopped at the first ` ``` ` fence it found,
+    which is often a fence nested *inside* a file's own content (a markdown
+    file documenting code blocks, a README with examples) rather than the
+    block's real terminator.
+  - The original header-opening regex used an unanchored `.*?` between the
+    file path and its opening fence, which could skip past unrelated
+    headers and fences entirely if the target filename happened to appear
+    elsewhere in the document (e.g. in a table-of-contents entry).
+  - Matching by filename substring caused collisions between files sharing
+    the same name at different paths (e.g. several `pyproject.toml` across
+    a monorepo's members) — the wrong file's content could be returned.
+
+  Rebuilds are now produced by a single validated scan of all real
+  file-header blocks (`_find_real_file_headers`), using exact path matching
+  and the last closing fence within each block's bounded window. Verified
+  byte-for-byte against three independent snapshots.
+
+### Known limitations
+
+- A handful of edge cases (~7 files across one large monorepo snapshot)
+  still over-capture when a file's content block is immediately followed
+  by a directory-level "README context" section rather than another file
+  header — not yet root-caused, left for a follow-up pass.
 
 ## [4.5.1] - 2026-05-02
 
@@ -42,7 +75,7 @@
   to match the new timeout parameter added to all clipboard calls.
 - **`pyproject.toml`**: Bumped version to `4.5.1`.
 
-## [4.5.0] - 2026-05-02
+## [4.5.2] - 2026-05-02
 
 ### Added
 
@@ -89,7 +122,7 @@
   before formatting. Progress output shows `[compressed]` tag when active.
 - **`cli.py`**: Added `--compress / -z` and `--compress-level` flags (new "Compression Mode"
   argument group). Both flags are persisted via `--save-config`.
-- **`pyproject.toml`**: Bumped version to `4.5.0`. Added `[project.optional-dependencies]`
+- **`pyproject.toml`**: Bumped version to `4.5.2`. Added `[project.optional-dependencies]`
   section with individual and bundle extras for compression support.
 - **`tests/test_clipboard.py`**: Updated Windows, macOS, and Linux xclip assertions
   to include `timeout=10` following the subprocess timeout fix in `utils.py`.
