@@ -1,0 +1,27 @@
+{
+  "paths": [
+    "src"
+    , "examples"
+    , "docs"
+    , "tests"
+    , "pyproject.toml"
+    , "ROADMAP.md"
+    , "README.md"
+    , "QUICKSTART_INTERACTIVE.md"
+    , "INTERACTIVE_MODE.md"
+    , "BUILD_AND_RELEASE.md"
+    , "CHANGELOG.md",
+    "LICENSE",
+    "AGENTS.md"
+  ],
+  "extensions": [
+    "py",
+    ".j2",
+    ".md"
+  ],
+  "output": "code-assembler.md",
+  "recursive": true,
+  "include_readmes": true,
+  "max_file_size_mb": 10.0,
+  "use_default_excludes": true
+}

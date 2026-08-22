@@ -1,6 +1,8 @@
 # Changelog
  
 ## [Unreleased]
+
+## [4.6.0] - 2026-08-22
 ### Changed
 
 - Consolidated `README.md`, `QUICKSTART_INTERACTIVE.md`, and
@@ -56,6 +58,16 @@
   `assemble()` → `--rebuild` round trip confirming the frontmatter is
   correctly ignored by `_find_real_file_headers()` /
   `_find_boundary_positions()`.
+- `tests/test_rebuild.py`: `TestRebuildRegressions
+  .test_readme_context_section_with_nested_fence_is_not_absorbed` —
+  regression test reproducing the bug above in isolation. 
+- `AGENTS.md`: guidance file for AI coding agents (Claude, GPT, Cursor,
+  Aider, etc.) working on the repository. Documents the rebuild workflow
+  for consuming generated snapshots (`--rebuild`), known architectural
+  pitfalls (CLI/`--config` override forwarding, tree-sitter as an optional
+  dependency, language detection fallback order, path normalization
+  behavior, Windows multi-drive handling), testing conventions, and current
+  limitations of the compression feature.
 
 ### Fixed
 
@@ -81,20 +93,6 @@
   all 4 now round-trip cleanly, with zero compilation errors across the
   full snapshot.
 
-### Added
-
-- `tests/test_rebuild.py`: `TestRebuildRegressions
-  .test_readme_context_section_with_nested_fence_is_not_absorbed` —
-  regression test reproducing the bug above in isolation.
-
-### Added
-- `AGENTS.md`: guidance file for AI coding agents (Claude, GPT, Cursor,
-  Aider, etc.) working on the repository. Documents the rebuild workflow
-  for consuming generated snapshots (`--rebuild`), known architectural
-  pitfalls (CLI/`--config` override forwarding, tree-sitter as an optional
-  dependency, language detection fallback order, path normalization
-  behavior, Windows multi-drive handling), testing conventions, and current
-  limitations of the compression feature.
 
 ## [4.5.2]
 
