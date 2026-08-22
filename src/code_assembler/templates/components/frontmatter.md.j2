@@ -1,0 +1,12 @@
+---
+type: source-bundle
+generator: code-assembler-pro
+generator_version: "{{ version }}"
+source_repo: {{ repo_url }}
+agents_doc: {{ repo_url }}/blob/v{{ version }}/AGENTS.md
+rebuild: "pip install code-assembler-pro && code-assembler --rebuild <this-file> --output-dir <dir>"
+generated_at: "{{ now_iso }}"
+files: {{ total_files }}
+tokens_estimate: {{ estimated_tokens }}
+---
+

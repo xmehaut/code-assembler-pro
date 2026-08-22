@@ -305,5 +305,57 @@ class TestRebuildRegressions(unittest.TestCase):
         self.assertNotIn("root-package", sub_toml)
 
 
+class TestRebuildWithFrontmatter(unittest.TestCase):
+    """
+    The frontmatter block added at the very top of generated snapshots
+    (see TestFrontmatter in test_core.py) must never interfere with
+    `--rebuild`: it has no `path` in backticks and no code fence, so
+    `_find_real_file_headers()` / `_find_boundary_positions()` must
+    simply skip over it. This exercises the real assemble() -> rebuild()
+    round trip end-to-end, rather than a hand-built snapshot.
+    """
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.root = Path(self.test_dir)
+        self.src_dir = self.root / "src"
+        self.src_dir.mkdir()
+        self.output_dir = self.root / "restored"
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir)
+
+    def test_round_trip_survives_leading_frontmatter(self):
+        import os
+        from code_assembler.core import assemble_codebase
+
+        (self.src_dir / "main.py").write_text("print('hello')", encoding='utf-8')
+        snapshot = self.root / "snapshot.md"
+
+        # generate_metadata_block() records paths relative to the CWD
+        # (so full and delta runs agree on the same root) — run from the
+        # project root, as a real invocation would.
+        previous_cwd = os.getcwd()
+        os.chdir(self.root)
+        try:
+            assemble_codebase(
+                paths=["src"], extensions=[".py"],
+                output=str(snapshot), show_progress=False
+            )
+        finally:
+            os.chdir(previous_cwd)
+
+        content = snapshot.read_text(encoding='utf-8')
+        self.assertTrue(content.startswith("---\n"), "Snapshot should start with frontmatter")
+
+        rebuilder = CodebaseRebuilder(str(snapshot), str(self.output_dir))
+        count, errors = rebuilder.rebuild()
+
+        self.assertEqual(errors, [])
+        self.assertEqual(count, 1)
+        restored = (self.output_dir / "src/main.py").read_text(encoding='utf-8')
+        self.assertEqual(restored, "print('hello')")
+
+
 if __name__ == "__main__":
     unittest.main()

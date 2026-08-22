@@ -14,6 +14,11 @@ try:
 except Exception:
     __version__ = "4.5.2"  # Fallback for dev mode without pip install
 
+# Canonical source repository, used in the frontmatter block (source_repo,
+# agents_doc) so an agent reading a generated snapshot can locate the
+# rebuild instructions without depending on network access to resolve them.
+REPO_URL = "https://github.com/xmehaut/code-assembler-pro"
+
 # Language mapping for syntax highlighting
 LANGUAGE_MAP: Dict[str, str] = {
     # Programming languages

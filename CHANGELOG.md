@@ -2,6 +2,35 @@
  
 ## [Unreleased]
 
+### Added
+
+- Every generated snapshot now starts with a small YAML frontmatter
+  block, loosely inspired by Google's Open Knowledge Format (OKF)
+  conventions (`type`, `generator`, `source_repo`, timestamp, and a
+  small set of producer-defined fields) — kept intentionally minimal
+  since this remains a single portable file, not an OKF multi-file
+  bundle. Exposes `generator_version`, `source_repo`, `agents_doc`
+  (pinned to the `v{version}` tag, not a branch, so it always matches
+  the exact release that produced the snapshot), and a `rebuild` field
+  with the exact command to reconstruct the project — all readable by
+  an agent that only looks at the start of a large file, or that has
+  no network access to resolve `agents_doc`. Rendered as its own
+  template (`components/frontmatter.md.j2`) and prepended in
+  `assemble()` only *after* the existing `delta_summary` substitution
+  on the header has already run, so its own `---` delimiters can never
+  be mistaken for the header's and steal the delta-summary insertion
+  point.
+- `constants.py`: added `REPO_URL`, the canonical source repository
+  used to build `source_repo` and `agents_doc` in the frontmatter.
+- `tests/test_core.py`: `TestFrontmatter` — validates the frontmatter
+  is well-formed YAML, its numeric fields (`files`, `tokens_estimate`)
+  are raw ints rather than comma-formatted display strings, and that
+  it never shifts where `delta_summary` gets inserted.
+- `tests/test_rebuild.py`: `TestRebuildWithFrontmatter` — end-to-end
+  `assemble()` → `--rebuild` round trip confirming the frontmatter is
+  correctly ignored by `_find_real_file_headers()` /
+  `_find_boundary_positions()`.
+
 ### Fixed
 
 - `rebuilder.py`: root-caused and fixed the known limitation noted in

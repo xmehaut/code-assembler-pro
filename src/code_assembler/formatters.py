@@ -14,7 +14,7 @@ from typing import List, Dict, Any
 from jinja2 import Environment, FileSystemLoader
 
 from .config import FileEntry, CodebaseStats, AssemblerConfig
-from .constants import LANGUAGE_MAP, EMOJI, __version__
+from .constants import LANGUAGE_MAP, EMOJI, __version__, REPO_URL
 from .utils import slugify_path, format_file_size, format_number
 
 
@@ -181,6 +181,34 @@ class MarkdownFormatter:
             "stats_table": self.generate_stats_table(stats, config)
         }
         return self.render("main_header.md.j2", data)
+
+    def generate_frontmatter(self, stats: CodebaseStats) -> str:
+        """
+        Generate a small YAML frontmatter block for the very top of the
+        document — loosely inspired by Google's Open Knowledge Format
+        (OKF) conventions, kept intentionally minimal since this remains
+        a single portable file, not an OKF multi-file bundle.
+
+        Deliberately rendered as its own template, separate from
+        `generate_header` / `main_header.md.j2`: that template's first
+        bare "---" is the anchor `assemble()` replaces to inject
+        `delta_summary`. Prepending a block that starts and ends with
+        "---" directly inside that template would shift which "---" is
+        the first one in the document and silently misplace the delta
+        summary. Kept as a standalone block, added by the caller after
+        the delta substitution has already run on the header alone.
+
+        Numeric fields are passed raw (not `format_number`-formatted,
+        which adds thousands separators) since this block is meant to be
+        machine-parsed as YAML, not read as prose.
+        """
+        data = {
+            "repo_url": REPO_URL,
+            "now_iso": datetime.now().isoformat(timespec="seconds"),
+            "total_files": stats.total_files,
+            "estimated_tokens": stats.estimated_tokens,
+        }
+        return self.render("components/frontmatter.md.j2", data)
 
     def generate_metadata_block(self, entries: List[FileEntry]) -> str:
         """

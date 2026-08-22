@@ -227,12 +227,19 @@ class CodebaseAssembler:
         if delta_summary:
             header = header.replace("---", f"{delta_summary}\n\n---", 1)
 
+        # Generated separately from generate_header() and prepended only
+        # here, i.e. after the delta_summary substitution above: this
+        # block starts and ends with its own "---" delimiters, and doing
+        # the substitution first (on `header` alone) guarantees it can
+        # never mistake the frontmatter's own "---" for the header's.
+        frontmatter = self.formatter.generate_frontmatter(self.stats)
+
         metadata_block = self.formatter.generate_metadata_block(self.toc_entries)
 
         if self.config.show_progress:
             self._print_summary()
 
-        return header + "\n\n" + full_content + metadata_block
+        return frontmatter + header + "\n\n" + full_content + metadata_block
 
     def _print_summary(self) -> None:
         """Print assembly summary to console."""
