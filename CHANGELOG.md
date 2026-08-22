@@ -1,6 +1,32 @@
 # Changelog
  
 ## [Unreleased]
+### Changed
+
+- Consolidated `README.md`, `QUICKSTART_INTERACTIVE.md`, and
+  `INTERACTIVE_MODE.md` into a single `README.md`. The two removed files
+  duplicated content already shown live by the tool itself (wizard steps,
+  configuration summary) or repeated the "Round-Trip Workflow" narrative
+  already covered in README's Quick Start — four independent rewrites of
+  the same workflow across the three files, none kept in sync (both
+  removed files were still titled "(v4.4.0)" despite the package being at
+  4.5.2). The new `## 🧙 Interactive Mode` section keeps only what was
+  genuinely unique: the wizard's FAQ, keyboard shortcuts, and the
+  `--save-config` bridge to JSON config.
+- Removed the `Recommended Use Cases` section from `README.md`: 3 of its
+  4 entries repeated the same commands already shown in `Quick Start`
+  under different headings.
+- `Advanced Configuration (JSON)` section rewritten with a complete,
+  directly-runnable template covering every `AssemblerConfig` field
+  (the previous example silently omitted `show_progress` and
+  `use_default_excludes`), a field-by-field reference table, and an
+  explanation of the CLI-flags-override-JSON mechanism — previously
+  documented only in `AGENTS.md`, invisible to a human reading the
+  README.
+- `CLI Options Reference` table completed with five flags that exist in
+  `cli.py` but were missing from the table: `--save-config`,
+  `--show-excludes`, `--no-recursive`, `--no-readmes`,
+  `--no-default-excludes`.
 
 ### Added
 

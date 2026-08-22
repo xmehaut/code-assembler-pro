@@ -93,6 +93,7 @@ Restore a project from a Markdown file (e.g., after an AI refactor):
 ```bash
 code-assembler --rebuild refactored_codebase.md --output-dir ./restored_project
 ```
+The full loop: assemble → paste into your LLM → ask for changes → save the response → `--rebuild` it back into place. Every generated snapshot carries a hidden metadata manifest, so this round-trip works even weeks later.
 
 ### 4. Compress a Dependency (The "Skeleton" Workflow)
 Generate a lightweight snapshot of a third-party package — full structure, minimal tokens:
@@ -103,6 +104,31 @@ code-assembler src/ --ext py --output my_package.md
 # A dependency — signatures + docstrings only
 code-assembler .venv/lib/some_dep/ --ext py --compress --output dep_skeleton.md
 ```
+
+---
+
+## 🧙 Interactive Mode
+
+Prefer a guided setup over remembering flags? Launch the wizard — it shows its own live prompts and a full configuration summary before running, so there's nothing to memorize here:
+
+```bash
+code-assembler -i
+```
+
+Answer its questions once, then save them to skip the wizard on every future run:
+
+```bash
+code-assembler . --ext py md --save-config my_project.json
+code-assembler --config my_project.json   # reruns with no prompts — see JSON config below
+```
+
+**Keyboard shortcuts:** `Enter` accepts the default value · `Ctrl+C` cancels at any point · `Ctrl+D` ends a list input (paths, patterns).
+
+**FAQ**
+
+- **How do I get my code back from the Markdown file?** `--rebuild` — it uses the hidden JSON metadata to recreate your exact folder structure (see workflow 3 above).
+- **Does `--clip` work on Linux?** Yes, but install `xclip` or `xsel` first. Works natively on Windows and macOS.
+- **Can I skip the wizard next time?** Yes — see `--save-config` above.
 
 ---
 
@@ -122,7 +148,12 @@ code-assembler .venv/lib/some_dep/ --ext py --compress --output dep_skeleton.md
 | `--compress-level` | **(v4.5)** `signatures` (default) or `docstrings_only` |
 | `--interactive` / `-i` | Launch the interactive wizard |
 | `--config` / `-c` | Load a JSON configuration file |
+| `--save-config` | Save the current CLI flags to a JSON file (no wizard needed) |
 | `--exclude` / `-x` | Patterns to exclude (added to defaults) |
+| `--show-excludes` | Print the full list of default exclusion patterns |
+| `--no-recursive` | Disable recursion into subdirectories (default: recursive) |
+| `--no-readmes` | Disable automatic README inclusion for folder context |
+| `--no-default-excludes` | Disable the built-in exclusion patterns entirely |
 | `--max-size` | Maximum file size in MB (default: 10.0) |
 | `--version` | Show version and exit |
 
@@ -212,49 +243,54 @@ rebuilder.rebuild()
 
 ## ⚙️ Advanced Configuration (JSON)
 
-For complex projects, use a JSON configuration file:
+For complex or repeated setups, save your configuration to a JSON file instead of retyping flags — either by hand from the template below, or generated for you by the interactive wizard's `--save-config`.
 
 ```json
 {
-  "paths": ["./src", "./infra"],
-  "extensions": [".py", ".ts", ".j2", "Dockerfile", ".env"],
-  "exclude_patterns": ["migrations", "__pycache__", "*.test.ts"],
-  "output": "project_context.md",
+  "paths": ["./src"],
+  "extensions": [".py", ".md"],
+  "exclude_patterns": [],
+  "output": "codebase.md",
   "recursive": true,
   "include_readmes": true,
-  "max_file_size_mb": 2.0,
+  "use_default_excludes": true,
+  "max_file_size_mb": 10.0,
   "truncate_large_files": true,
   "truncation_limit_lines": 500,
+  "show_progress": true,
   "compress": false,
   "compress_level": "signatures"
 }
 ```
-Run it using: `code-assembler --config assembler_config.json`
 
----
+Only `paths` and `extensions` are required — every other key falls back to the default shown above if omitted.
 
-## 💡 Recommended Use Cases
+| Key | Default | Notes |
+|---|---|---|
+| `paths` | *(required)* | At least one path |
+| `extensions` | *(required)* | At least one; exact filenames like `Dockerfile`/`Makefile` are auto-detected (capitalized, no leading dot) |
+| `exclude_patterns` | `[]` | Added to the defaults, not a replacement — see `use_default_excludes` |
+| `output` | `"codebase.md"` | ⚠️ the JSON key is `output`, not `output_file` (the internal config field's name) |
+| `recursive` | `true` | |
+| `include_readmes` | `true` | |
+| `use_default_excludes` | `true` | `false` disables the built-in `__pycache__`, `.venv`, etc. patterns (run `--show-excludes` to see the full list) |
+| `max_file_size_mb` | `10.0` | |
+| `truncate_large_files` | `true` | |
+| `truncation_limit_lines` | `500` | |
+| `show_progress` | `true` | |
+| `compress` | `false` | |
+| `compress_level` | `"signatures"` | Only other value currently accepted is `"docstrings_only"`, reserved for a future stricter mode |
 
-### 1. Massive Refactoring Loop
-1. Assemble your project: `code-assembler . -e py --clip`
-2. Paste into Claude: *"Refactor this project to use Pydantic v2."*
-3. Save Claude's response as `refactor.md`.
-4. Apply changes: `code-assembler --rebuild refactor.md --output-dir .`
-
-### 2. Dependency Context (new in v4.5)
-Give the AI full structural context of a library without burning your token budget:
+Run it with:
 ```bash
-code-assembler .venv/lib/pydantic/ -e py --compress --output pydantic_api.md
+code-assembler --config assembler_config.json
 ```
 
-### 3. Incremental Debugging
-After fixing a bug, send only the delta to the AI to verify the fix without re-sending the whole codebase:
+**CLI flags override the JSON file, not the other way around** — any flag passed alongside `--config` wins over the matching JSON key:
 ```bash
-code-assembler . -e py --since previous_snapshot.md --clip
+code-assembler --config base_config.json --compress --since last_snapshot.md
 ```
-
-### 4. Infrastructure Audit
-Include `Dockerfile`, `Makefile`, and `.tf` files to give the AI a full view of your deployment stack.
+Handy for keeping one stable base config and only varying what changes per run. Note that `--since` is never a JSON key itself — delta mode always comes from this flag, config file or not.
 
 ---
 
