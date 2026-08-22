@@ -71,14 +71,46 @@ class CodebaseRebuilder:
             for m in header_re.finditer(self.md_content)
         ]
 
+    def _find_boundary_positions(self) -> List[int]:
+        """
+        Every position in the document that must bound a file's content
+        window: real file headers (path + immediate fence) AND
+        directory-level "README context" headings injected by
+        `readme_context.md.j2`.
+
+        The latter are not files — they carry no path in backticks, no
+        fence immediately follows them, and they are never a key in the
+        embedded metadata — so `_find_real_file_headers` never returns
+        them. But they are still a real document boundary: if a
+        preceding file's search window is bounded only by the *next real
+        file header*, it silently extends across an intervening README
+        section. When that section's own prose contains a nested ```
+        example, the example's closing fence becomes the new "last bare
+        fence" inside the preceding file's window, and
+        `_extract_file_content` swallows the README section (and
+        everything up to that nested close) into the preceding file.
+        Regression: CHANGELOG.md [4.5.2] known limitation, ~7 files on a
+        real monorepo snapshot; root-caused and fixed here.
+        """
+        positions = [start for _, start, _ in self._find_real_file_headers()]
+        readme_heading_re = re.compile(
+            r'^#+[ \t]+README context[ \t]*\r?$',
+            re.MULTILINE | re.IGNORECASE
+        )
+        positions.extend(m.start() for m in readme_heading_re.finditer(self.md_content))
+        return sorted(positions)
+
     def _extract_file_content(self, rel_path: str) -> Optional[str]:
         """
         Find and extract the content of a specific file from the Markdown.
         Robust against path separators, blank lines, duplicate filenames at
-        different paths, and nested ``` fences inside the file's own content
+        different paths, nested ``` fences inside the file's own content
         (a markdown file documenting code blocks, a README showing
-        examples, etc. — see `_find_real_file_headers` for why a single
-        validated scan is used instead of a per-call regex search).
+        examples, etc.), and an intervening directory-level "README
+        context" section between this file and the next real file header
+        — see `_find_real_file_headers` and `_find_boundary_positions` for
+        why a single validated scan is used instead of a per-call regex
+        search.
         """
         target_normalized = rel_path.replace('\\', '/').strip()
         headers = self._find_real_file_headers()
@@ -91,8 +123,15 @@ class CodebaseRebuilder:
             return None
 
         _, _, content_start = headers[match_index]
-        content_end_bound = (
-            headers[match_index + 1][1] if match_index + 1 < len(headers) else len(self.md_content)
+
+        # Bound by the next boundary of ANY kind — a real file header or
+        # a "README context" heading — not just the next real file
+        # header, so an intervening README section can never leak past
+        # its own start into this file's window.
+        boundaries = self._find_boundary_positions()
+        content_end_bound = next(
+            (pos for pos in boundaries if pos > content_start),
+            len(self.md_content)
         )
         search_zone = self.md_content[content_start:content_end_bound]
 

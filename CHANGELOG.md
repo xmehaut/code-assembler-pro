@@ -2,6 +2,36 @@
  
 ## [Unreleased]
 
+### Fixed
+
+- `rebuilder.py`: root-caused and fixed the known limitation noted in
+  [4.5.2] — a file's content block was over-captured when immediately
+  followed by a directory-level "README context" section rather than
+  another file header. `_find_real_file_headers()` only recognizes a
+  boundary when a `` `path` `` heading is immediately followed by an
+  opening fence; the `### README context` heading emitted by
+  `readme_context.md.j2` never satisfies that (a blank line and prose
+  follow, not a fence), so it was never counted as a boundary. When such
+  a section's own prose contained a nested ``` example, that example's
+  closing fence became the "last bare fence" inside the *preceding*
+  file's search window, silently merging the README section — and
+  everything up to that nested close — into the wrong file.
+
+  Added `_find_boundary_positions()`, which merges real file headers and
+  "README context" headings into a single sorted boundary list;
+  `_extract_file_content()` now bounds its search window on the next
+  boundary of either kind. Verified against a real 136-file / ~354k-token
+  snapshot where 4 files (`tot.py`, `fields.py`, `agent.py`,
+  `memory/summarizer.py`) previously failed to compile after rebuild —
+  all 4 now round-trip cleanly, with zero compilation errors across the
+  full snapshot.
+
+### Added
+
+- `tests/test_rebuild.py`: `TestRebuildRegressions
+  .test_readme_context_section_with_nested_fence_is_not_absorbed` —
+  regression test reproducing the bug above in isolation.
+
 ### Added
 - `AGENTS.md`: guidance file for AI coding agents (Claude, GPT, Cursor,
   Aider, etc.) working on the repository. Documents the rebuild workflow
