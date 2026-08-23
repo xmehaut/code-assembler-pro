@@ -1,6 +1,7 @@
 # Changelog
- 
-## [4.7.1]
+
+## [4.7.1] - 2026-08-23
+
 ### Fixed
 
 - Top-level entries in `paths` never got their own directory header in
@@ -17,16 +18,38 @@
   affected, only the TOC's readability. Found by inspecting this
   release's own self-generated snapshot.
 
-## [4.7.0]
+## [4.7.0] - 2026-08-23
+
 ### Added
 
-- `depends_on` (per-module, JSON-only, MODULES_SPEC.md §6): a list of
-  other module names in the same `modules` block. Purely declarative —
-  echoed into the frontmatter, no import analysis. Validated at
-  config-parse time: an unknown module name or a module depending on
-  itself is a hard error before any file is written. Deliberately not
-  inheritable from the config root (a root-level `depends_on` would
-  apply to every module including the one it names).
+- `description` — optional free-text field, via `--description` on the
+  CLI or a root-level `"description"` key in JSON configs. Pure
+  passthrough into the frontmatter, escaped with `json.dumps()` rather
+  than hand-rolled quoting (a description containing a quote, colon, or
+  backslash would otherwise produce invalid or silently wrong YAML).
+  Omitted from the frontmatter entirely when not set — never rendered
+  as `description: null` or `""` — so a run that doesn't use it
+  produces byte-for-byte the same frontmatter as 4.6.x.
+- `modules` — JSON-only config key (`MODULES_SPEC.md` §2-4): assemble a
+  monorepo's sub-projects in a single pass, one output file per module.
+  Each module declares its own `paths`; every other root-level key
+  (`extensions`, `exclude_patterns`, `compress`, `description`, …) is
+  inherited by default and can be replaced — never merged — per module.
+  Output filenames are derived from the root `output`
+  (`codebase.md` → `codebase_api.md`), or set explicitly per module.
+  `config.resolve_module_configs()` validates the whole block before
+  any file is written: unknown shape, missing `paths`/`extensions`, or
+  a module name containing a path separator all raise immediately.
+  `core.assemble_modules()` then assembles each module in turn — one
+  bad module (bad path, permission error) does not abort the batch, the
+  rest still get built and the failure is reported in the summary.
+- `depends_on` — per-module, JSON-only (§6): a list of other module
+  names in the same `modules` block. Purely declarative — echoed into
+  the frontmatter, no import analysis. Validated at config-parse time:
+  an unknown module name or a module depending on itself is a hard
+  error before any file is written. Deliberately not inheritable from
+  the config root (a root-level `depends_on` would apply to every
+  module including the one it names).
 - `siblings` in the frontmatter (§7): every other module in the same
   batch, with its file name, description, and token count — so an
   agent can decide which sibling to open next without opening any of
@@ -35,67 +58,73 @@
   per-module writes.
 - `module` in the frontmatter: the current file's own module name,
   present only in batch-mode output.
-
-- `modules` (JSON-only config key, MODULES_SPEC.md §2-4): assemble a
-  monorepo's sub-projects in a single pass, one output file per module.
-  Each module declares its own `paths`; every other root-level key
-  (`extensions`, `exclude_patterns`, `compress`, `description`, …) is
-  inherited by default and can be replaced (not merged) per module.
-  Output filenames are derived from the root `output`
-  (`codebase.md` → `codebase_api.md`), or set explicitly per module.
-  `--since` and CLI overrides (`--compress`, `--description`) are
-  explicitly rejected on a `modules` config rather than guessed at.
-- `config.resolve_module_configs()`: validates a whole `modules` block
-  before any file is written — unknown shape, missing `paths`, missing
-  `extensions`, or a module name containing a path separator all raise
-  immediately.
-- `core.assemble_modules()`: one bad module (bad path, permission
-  error) does not abort the batch — the rest still get built, and the
-  failure is reported in the returned summary.
-
-- New optional `description` field (spec: `MODULES_SPEC.md` §5), exposed
-  via `--description` on the CLI and as a root-level `"description"` key
-  in JSON configs. Pure passthrough into the frontmatter — no validation
-  or generation logic. Free-text content is escaped with `json.dumps()`
-  rather than hand-rolled quoting, since a description containing a
-  quote, colon, or backslash would otherwise produce invalid or silently
-  wrong YAML.
-- **Backward compatible by construction**: the field is omitted from the
-  frontmatter entirely when not set — never rendered as
-  `description: null` or `description: ""` — so a run that doesn't use
-  it produces byte-for-byte the same frontmatter as 4.6.x. Covered by
-  `tests/test_core.py::TestFrontmatter::test_no_description_keeps_frontmatter_at_4_6_x_shape`.
-
-- First step of the multi-module monorepo feature described in
-`MODULES_SPEC.md` — `modules`, `depends_on`, and `siblings` follow in
-subsequent steps.
+- `--since` and any CLI override (`--compress`, `--description`, …) are
+  explicitly rejected on a `modules` config rather than guessed at —
+  there is no single snapshot to diff against N independent outputs,
+  and no single module an override should apply to.
 
 ### Fixed
 
-- `assemble_codebase()` never raised on a path that doesn't exist —
-  it silently produced a near-empty snapshot. Harmless for a single,
-  deliberate call, but wrong for a `modules` batch, where a bad path
-  in one module must not look identical to success. `assemble_modules()`
+- `assemble_codebase()` never raised on a path that doesn't exist — it
+  silently produced a near-empty snapshot. Harmless for a single,
+  deliberate call, but wrong for a `modules` batch, where a bad path in
+  one module must not look identical to success. `assemble_modules()`
   now checks path existence explicitly before assembling each module.
-
-Second step of the multi-module feature (`MODULES_SPEC.md`). `depends_on`
-and `siblings` (frontmatter cross-references) are the remaining step.
-- **Fix**: `--description` broke `test_clipboard.py::test_cli_calls_clipboard`
-  and, latently, three Namespace fixtures in `test_robustness.py` — all four
-  construct `argparse.Namespace` by hand (mocking `parse_args`) rather than
-  going through the real parser, so they don't automatically pick up new
-  argparse defaults the way a real CLI invocation does. Added
-  `description=None` to each.
+- `assemble_modules` was missing from `code_assembler/__init__.py`'s
+  exports — `from code_assembler import assemble_modules` raised
+  `ImportError`. Now exported alongside `assemble_codebase` /
+  `assemble_from_config`.
+- `assemble_modules()`'s frontmatter-patching phase passed the
+  regenerated frontmatter directly as `re.sub()`'s replacement
+  argument. `re.sub()` interprets backslashes in a *string* replacement
+  as backreferences, and `json.dumps()` escapes non-ASCII characters as
+  `\uXXXX` — a description containing an em-dash (or any non-ASCII
+  character) produced `bad escape \u` and crashed the batch. Found by
+  running the exact JSON from this release's own README example. Fixed
+  by passing a function instead of a string to `re.sub()`.
+- `--description` broke `test_clipboard.py::test_cli_calls_clipboard`
+  and, latently, three `Namespace` fixtures in `test_robustness.py` —
+  all four construct `argparse.Namespace` by hand (mocking
+  `parse_args`) rather than going through the real parser, so they
+  don't automatically pick up new argparse defaults the way a real CLI
+  invocation does. Added `description=None` to each.
 
 ### Changed
 
 - `formatters.generate_frontmatter()` now takes `total_files` /
   `estimated_tokens` as plain ints instead of a `CodebaseStats`
   instance — internal signature change, no effect on generated output
-  for existing callers.
+  for existing callers. Needed since `assemble_modules()`'s frontmatter
+  patching phase has no live `CodebaseStats` object, only the numbers
+  already written into a module's first-pass frontmatter.
 
-This completes the multi-module monorepo feature described in
-`MODULES_SPEC.md` (all of §2-7 now implemented). Suggested version:
+### Docs
+
+- `README.md`: added the `modules`/`depends_on`/`siblings` feature (new
+  "Monorepo Assembly" section, a Programmatic API example, a Key
+  Features bullet, a Why point) and `description` (CLI options table,
+  JSON template/reference) — neither had been documented since landing
+  across three earlier commits.
+- `examples/modules_usage.py`: new, mirrors the style of the four
+  existing examples. Writes its demo output to a temp directory, not
+  into the repo — see Known limitations below on why.
+- `AGENTS.md`: documents `description`/`modules`/`depends_on`/`siblings`
+  for agents discovering the tool (Part 1), plus three new pitfalls for
+  contributors (Part 2): `modules` deliberately rejects CLI overrides
+  rather than forwarding them, `re.sub()` needs a function replacement
+  when splicing generated text, and self-referential documents need
+  "last match, not first" for anything meant to be unique.
+
+### Known limitations
+
+- A previously-generated code-assembler-pro `.md` file cannot be
+  losslessly rebuilt if it's itself swept up as *content* inside a
+  later assembly — its internal `` ### `path` `` + fence headers are
+  structurally identical to real top-level ones. Fails loud and safe
+  (`--rebuild` reports "Content not found" for that one file and
+  continues with the rest), never silent corruption. Found by running
+  this tool on its own repository; see `AGENTS.md` for the practical
+  mitigation and why a proper fix is a larger change, not a patch.
 
 ## [4.6.1] - 2026-08-23
 
