@@ -21,6 +21,7 @@ Copy-pasting raw files into a chat window leads to context loss. **Code Assemble
 3.  **⏱️ Token Efficiency:** Use `--since` (Delta Mode) to send only modified files, saving thousands of tokens.
 4.  **✂️ Smart Compression:** Use `--compress` to reduce a dependency's code to signatures + docstrings only — dramatically shrinking token count while preserving full structural context.
 5.  **🛡️ Metadata Manifest:** Injects a hidden JSON manifest for 100% reliable project reconstruction and change tracking.
+6.  **🗂️ Monorepo-Aware:** Assemble every sub-project in one pass with `modules` — one Markdown file each, cross-linked so an agent knows what else exists without opening it first.
 
 ---
 
@@ -33,6 +34,7 @@ Copy-pasting raw files into a chat window leads to context loss. **Code Assemble
 - **🧠 Architecture Analysis:** Detects design patterns (MVC, API, Testing) and provides file distribution stats.
 - **📊 Token Metrics:** Real-time estimation of token count to stay within model context windows.
 - **📝 Enhanced Syntax Highlighting:** Support for 50+ extensions including **Jinja2**, **Terraform**, and smart detection for `Dockerfile`, `Makefile`, and `.env`.
+- **🗂️ Multi-Module Assembly (`modules`):** One JSON config, one output file per sub-project — each aware of the others via `depends_on` and a `siblings` list in its frontmatter. See *Monorepo Assembly* below.
 - **🖥️ Cross-Platform:** Native support for Windows, macOS, and Linux with automatic emoji/ASCII adaptation.
 
 ---
@@ -147,6 +149,7 @@ code-assembler --config my_project.json   # reruns with no prompts — see JSON 
 | `--compress` / `-z` | **(v4.5)** Compress to signatures + docstrings only |
 | `--compress-level` | **(v4.5)** `signatures` (default) or `docstrings_only` |
 | `--interactive` / `-i` | Launch the interactive wizard |
+| `--description` | Free-text description embedded in the frontmatter |
 | `--config` / `-c` | Load a JSON configuration file |
 | `--save-config` | Save the current CLI flags to a JSON file (no wizard needed) |
 | `--exclude` / `-x` | Patterns to exclude (added to defaults) |
@@ -239,6 +242,24 @@ rebuilder = CodebaseRebuilder("ai_response.md", "./new_src")
 rebuilder.rebuild()
 ```
 
+### Multi-module (monorepo) assembly
+```python
+from code_assembler import assemble_modules
+
+result = assemble_modules({
+    "extensions": [".py"],
+    "output": "codebase.md",
+    "modules": {
+        "shared": {"paths": ["./libs/core"]},
+        "api": {"paths": ["./api"], "depends_on": ["shared"]},
+    },
+})
+# result == {"succeeded": {"shared": "codebase_shared.md", "api": "codebase_api.md"},
+#            "failed": {}}
+```
+One bad module (bad path, permission error) doesn't abort the others — see
+`failed` in the result and *Monorepo Assembly* below for the full picture.
+
 ---
 
 ## ⚙️ Advanced Configuration (JSON)
@@ -251,6 +272,7 @@ For complex or repeated setups, save your configuration to a JSON file instead o
   "extensions": [".py", ".md"],
   "exclude_patterns": [],
   "output": "codebase.md",
+  "description": "",
   "recursive": true,
   "include_readmes": true,
   "use_default_excludes": true,
@@ -271,6 +293,7 @@ Only `paths` and `extensions` are required — every other key falls back to the
 | `extensions` | *(required)* | At least one; exact filenames like `Dockerfile`/`Makefile` are auto-detected (capitalized, no leading dot) |
 | `exclude_patterns` | `[]` | Added to the defaults, not a replacement — see `use_default_excludes` |
 | `output` | `"codebase.md"` | ⚠️ the JSON key is `output`, not `output_file` (the internal config field's name) |
+| `description` | *(none)* | Free text embedded in the frontmatter. Omitted entirely from the frontmatter when not set — not written as `null`/`""` |
 | `recursive` | `true` | |
 | `include_readmes` | `true` | |
 | `use_default_excludes` | `true` | `false` disables the built-in `__pycache__`, `.venv`, etc. patterns (run `--show-excludes` to see the full list) |
@@ -291,6 +314,68 @@ code-assembler --config assembler_config.json
 code-assembler --config base_config.json --compress --since last_snapshot.md
 ```
 Handy for keeping one stable base config and only varying what changes per run. Note that `--since` is never a JSON key itself — delta mode always comes from this flag, config file or not.
+
+### 🗂️ Monorepo Assembly (`modules`)
+
+For a repo with several independent sub-projects, `modules` assembles all of
+them in one pass — one output file each, instead of one invocation per
+sub-project run by hand. **JSON-only** — there's no `--modules` flag, since
+this describes a structure, not a one-shot command.
+
+```json
+{
+  "extensions": [".py"],
+  "output": "codebase.md",
+  "modules": {
+    "shared":   { "paths": ["./libs/core", "./libs/utils"] },
+    "api":      { "paths": ["./api"], "depends_on": ["shared"],
+                  "description": "REST API — auth, billing, webhooks" },
+    "frontend": { "paths": ["./frontend"], "extensions": [".ts", ".tsx"],
+                  "depends_on": ["shared"],
+                  "description": "React SPA consuming the API" }
+  }
+}
+```
+
+```bash
+code-assembler --config monorepo.json
+```
+
+- Every root-level key (`extensions`, `compress`, `description`, …) is each
+  module's default; a module's own key **replaces** it entirely — no
+  merging, so a module needing the root's `exclude_patterns` plus its own
+  must repeat them.
+- Output filenames are derived from the root `output`: `codebase.md` →
+  `codebase_api.md`, `codebase_frontend.md`, `codebase_shared.md`. Set a
+  module's own `"output"` to override.
+- `depends_on` is a list of other module names, purely declarative (no
+  import analysis) — validated when the config loads: an unknown name or a
+  module depending on itself fails immediately, before anything is written.
+- Every module's frontmatter gets a `siblings` list — the other modules'
+  file name, description, and token count — so an agent can decide what
+  else to open without opening it first:
+  ```yaml
+  module: api
+  depends_on: [shared]
+  siblings:
+    - { module: frontend, file: codebase_frontend.md, description: "React SPA consuming the API", tokens: 42000 }
+    - { module: shared,   file: codebase_shared.md,   description: "",                             tokens: 8500 }
+  ```
+- One bad module (bad path, permission error) doesn't abort the batch — the
+  rest still get built, and the failure is reported:
+  ```
+    ✅ shared -> codebase_shared.md
+    ✅ api -> codebase_api.md
+    ❌ frontend: path(s) not found: ./frontend
+
+  🚀 2/3 module(s) assembled
+  ```
+- `--since` and CLI overrides (`--compress`, `--description`, …) aren't
+  supported alongside a `modules` config — there's no single snapshot to
+  diff against N independent outputs, and no single module to apply an
+  override to. Set these inside the JSON itself, at the root or per module.
+- Each module's `.md` file is a complete, independent snapshot — `--rebuild`
+  works on any one of them exactly as it would on a single-project file.
 
 ---
 

@@ -108,6 +108,30 @@ Regression tests: `tests/test_metadata_last_match.py`,
 (and `test_truncation_warning` corrected to use the real marker format
 instead of an unrealistic hand-crafted one).
 
+- `assemble_modules` was missing from `code_assembler/__init__.py`'s
+  exports — `from code_assembler import assemble_modules` raised
+  `ImportError`. Now exported alongside `assemble_codebase` /
+  `assemble_from_config`.
+- `assemble_modules()`'s frontmatter-patching phase (§9 phase 2) passed
+  the regenerated frontmatter directly as `re.sub()`'s replacement
+  argument. `re.sub()` interprets backslashes in a *string* replacement
+  as backreferences, and `json.dumps()` escapes non-ASCII characters as
+  `\uXXXX` — a description containing an em-dash (or any non-ASCII
+  character) produced `bad escape \u` and crashed the batch. Found by
+  running the exact JSON from this release's own README example.
+  Fixed by passing a function instead of a string to `re.sub()`.
+
+### Docs
+
+- `README.md`: added the `modules`/`depends_on`/`siblings` feature
+  (new "Monorepo Assembly" section, a Programmatic API example, a Key
+  Features bullet, a Why point) and `description` (missing from the
+  CLI options table and the JSON template/reference despite already
+  shipping) — neither had been documented since the feature landed
+  across three earlier commits.
+- `examples/modules_usage.py`: new, mirrors the style of the four
+  existing examples. Verified it runs end-to-end from the project root.
+
 ## [4.6.0] - 2026-08-22
 ### Changed
 

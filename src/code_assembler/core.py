@@ -430,7 +430,7 @@ def assemble_modules(config_data: dict) -> Dict[str, Dict[str, str]]:
         )
         output_path = Path(info["output"])
         content = output_path.read_text(encoding='utf-8')
-        patched = frontmatter_re.sub(new_frontmatter, content, count=1)
+        patched = frontmatter_re.sub(lambda _match: new_frontmatter, content, count=1)
         output_path.write_text(patched, encoding='utf-8')
 
     return {"succeeded": succeeded, "failed": failed}

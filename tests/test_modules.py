@@ -17,6 +17,18 @@ from code_assembler.config import resolve_module_configs, derive_module_output
 from code_assembler.core import assemble_modules, assemble_from_config
 
 
+class TestPublicAPI(unittest.TestCase):
+    """assemble_modules() must be importable the same way as the rest of
+    the public API — omitted from __init__.py when first added, caught
+    only while writing README/examples for it, not by a test. Guarded
+    here so it can't silently regress."""
+
+    def test_assemble_modules_is_exported_from_the_top_level_package(self):
+        import code_assembler
+        self.assertTrue(hasattr(code_assembler, "assemble_modules"))
+        self.assertIn("assemble_modules", code_assembler.__all__)
+
+
 class TestDeriveModuleOutput(unittest.TestCase):
     """§4 naming table, exercised directly."""
 
@@ -454,6 +466,41 @@ class TestSiblingsFrontmatter(unittest.TestCase):
             (self.root / "restored" / "api" / "main.py").read_text(encoding='utf-8'),
             "print('hello')"
         )
+
+
+    def test_description_with_non_ascii_characters_does_not_break_patching(self):
+        """
+        Regression: json.dumps() escapes non-ASCII characters as \\uXXXX
+        (e.g. an em-dash becomes \\u2014). Phase 2 originally passed the
+        regenerated frontmatter straight to re.sub() as the replacement
+        argument — re.sub() interprets backslashes in a *string*
+        replacement as backreferences (\\1, \\g<name>, ...), and \\u2014
+        isn't a valid one, raising "bad escape \\u". Found by running the
+        exact JSON from README.md's own Monorepo Assembly example, whose
+        description contains an em-dash.
+        """
+        (self.root / "api").mkdir()
+        (self.root / "api" / "main.py").write_text("print('api')", encoding='utf-8')
+        (self.root / "shared").mkdir()
+        (self.root / "shared" / "core.py").write_text("x = 1", encoding='utf-8')
+
+        result = assemble_modules({
+            "extensions": [".py"],
+            "output": "codebase.md",
+            "show_progress": False,
+            "modules": {
+                "api": {
+                    "paths": ["api"],
+                    "description": "REST API — auth, billing, webhooks",
+                    "depends_on": ["shared"],
+                },
+                "shared": {"paths": ["shared"]},
+            },
+        })
+
+        self.assertEqual(result["failed"], {})
+        api_fm = self._frontmatter("codebase_api.md")
+        self.assertEqual(api_fm["description"], "REST API — auth, billing, webhooks")
 
 
 if __name__ == "__main__":
