@@ -2,6 +2,13 @@
 
 Step-by-step guide to developing, testing, and publishing a new version of the package.
 
+`X.Y.Z` below stands for whatever version you're releasing — this guide is
+kept version-agnostic on purpose. Earlier revisions hardcoded a specific
+version number throughout (`4.5.2`, then later ones), and every one of them
+went stale the moment the next release shipped. Don't reintroduce that: if
+you're tempted to write a real version number in this file, write `X.Y.Z`
+instead.
+
 ---
 
 ## Prerequisites
@@ -45,7 +52,7 @@ pip install -e ".[compress-all]"       # Everything
 
 **Verifications:**
 ```bash
-code-assembler --version          # Should display 4.5.2
+code-assembler --version          # Should display X.Y.Z
 code-assembler --show-excludes    # Test a quick command
 code-assembler src/ --ext py --compress --output test_compress.md   # Test compression
 ```
@@ -58,26 +65,20 @@ code-assembler src/ --ext py --compress --output test_compress.md   # Test compr
 pytest tests/ -v
 ```
 
-**All tests must pass before publishing.** Version 4.5.2 adds compression tests:
+**All tests must pass before publishing.** Don't rely on a specific test
+count in this guide — it grows with every feature and any number written
+here would be stale within a release or two. Read pytest's own summary
+line instead:
+
 ```
-tests/test_config.py::... PASSED
-tests/test_core.py::... PASSED
-tests/test_file_io.py::... PASSED
-tests/test_interactive.py::... PASSED
-tests/test_utils.py::... PASSED
-tests/test_delta_scenario.py::... PASSED
-tests/test_formats.py::... PASSED
-tests/test_rebuild.py::... PASSED
-tests/test_clipboard.py::... PASSED
-tests/test_compressor.py::... PASSED   # New in v4.5
-===== 54+ passed =====
+===== N passed, 1 skipped =====
 ```
 
-> **Note on compression tests:** `test_missing_package_reported` is skipped if
-> `tree-sitter` is not installed in the test environment. This is expected and correct.
-> The test runs automatically in environments where tree-sitter is available.
+The one skip is **expected**: it corresponds to a tree-sitter test that
+only runs when the optional tree-sitter packages are installed. Do not try
+to "fix" it or make it mandatory — see `AGENTS.md` if you're unsure why.
 
-> **Rule:** Never publish if a single test fails (skips are acceptable).
+> **Rule:** Never publish if a single test fails (the one expected skip is fine).
 
 ---
 
@@ -86,8 +87,13 @@ tests/test_compressor.py::... PASSED   # New in v4.5
 In `pyproject.toml`:
 ```toml
 [project]
-version = "4.5.2"
+version = "X.Y.Z"
 ```
+
+Also check `src/code_assembler/constants.py`'s `__version__` fallback
+string (used only in dev mode, when the package isn't properly
+pip-installed and `importlib.metadata` has nothing to read) — keep it in
+sync so it doesn't silently drift from `pyproject.toml`.
 
 Verify that `code-assembler --version` returns the correct version.
 
@@ -102,8 +108,8 @@ python -m build
 This generates two files in `dist/`:
 ```
 dist/
-├── code_assembler_pro-4.5.2-py3-none-any.whl
-└── code_assembler_pro-4.5.2.tar.gz
+├── code_assembler_pro-X.Y.Z-py3-none-any.whl
+└── code_assembler_pro-X.Y.Z.tar.gz
 ```
 
 **Verify that Jinja2 templates are included:**
@@ -115,14 +121,19 @@ unzip -l dist/*.whl | grep j2
 Get-ChildItem dist/*.whl | ForEach-Object { tar -tf $_.FullName } | Select-String "j2"
 ```
 
-The `*.j2` files **must** appear in the list (otherwise the package will crash at runtime).
+The `*.j2` files **must** appear in the list (otherwise the package will
+crash at runtime). This check matters most exactly when you've just added a
+*new* template file — `package-data` in `pyproject.toml` uses a glob
+(`templates/*.j2`, `templates/components/*.j2`), so a new file in either of
+those two directories is picked up automatically, but a template added
+somewhere else wouldn't be — that's the failure mode this step catches.
 
 ---
 
 ## Step 5 — Publish to TestPyPI
 
 ```bash
-twine upload --repository testpypi dist/code_assembler_pro-4.5.2*
+twine upload --repository testpypi dist/code_assembler_pro-X.Y.Z*
 ```
 
 **Test the standard installation:**
@@ -132,7 +143,7 @@ python -m venv venv && .\venv\Scripts\activate
 
 pip install --index-url https://test.pypi.org/simple/ \
             --extra-index-url https://pypi.org/simple/ \
-            code-assembler-pro==4.5.2
+            code-assembler-pro==X.Y.Z
 
 code-assembler --version
 code-assembler --help
@@ -143,7 +154,7 @@ code-assembler --help
 # Install with web compression support
 pip install --index-url https://test.pypi.org/simple/ \
             --extra-index-url https://pypi.org/simple/ \
-            "code-assembler-pro[compress-web]==4.5.2"
+            "code-assembler-pro[compress-web]==X.Y.Z"
 
 # Verify Python compression (no extra needed)
 code-assembler src/ --ext py --compress --output skeleton.md
@@ -153,6 +164,22 @@ cat skeleton.md   # Check that bodies are replaced with '...'
 code-assembler src/ --ext js --compress --output skeleton_js.md
 ```
 
+**Test the multi-module ("modules") config path**, since it's easy to
+forget it isn't exercised by any of the checks above:
+```bash
+cat > modules_smoke_test.json << 'EOF'
+{
+  "extensions": [".py"],
+  "output": "smoke.md",
+  "modules": {
+    "a": { "paths": ["src"] }
+  }
+}
+EOF
+code-assembler --config modules_smoke_test.json
+head -15 smoke_a.md   # frontmatter should show module: a, siblings: []
+```
+
 ---
 
 ## Step 6 — Publish to PyPI (Production)
@@ -160,11 +187,11 @@ code-assembler src/ --ext js --compress --output skeleton_js.md
 Once TestPyPI validation is successful:
 
 ```bash
-twine upload dist/code_assembler_pro-4.5.2*
+twine upload dist/code_assembler_pro-X.Y.Z*
 ```
 
 The package will be available at:
-`https://pypi.org/project/code-assembler-pro/4.5.2/`
+`https://pypi.org/project/code-assembler-pro/X.Y.Z/`
 
 ---
 
@@ -172,8 +199,8 @@ The package will be available at:
 
 ```bash
 git add -A
-git commit -m "feat: v4.5.2 - Code Compression Mode (--compress) with tree-sitter per-language support"
-git tag v4.5.2
+git commit -m "feat: vX.Y.Z - <one-line summary of what shipped>"
+git tag vX.Y.Z
 git push origin main --tags
 ```
 
@@ -183,16 +210,24 @@ git push origin main --tags
 
 ```
 [ ] 1. pip install -e .
-[ ] 2. pytest tests/ -v              → All tests pass (54+ including new v4.5 compression tests)
-[ ] 3. Update version in pyproject.toml to 4.5.2
-[ ] 4. python -m build               → .whl + .tar.gz in dist/
-[ ] 5. Verify j2 templates inside the .whl
-[ ] 6. twine upload --repository testpypi dist/*4.5.2*
-[ ] 7. Test standard install + test --compress on Python files (no extra needed)
-[ ] 8. Test install with [compress-web] extra + test --compress on .js files
-[ ] 9. twine upload dist/*4.5.2*     → Production PyPI
-[ ] 10. git commit + tag + push
+[ ] 2. pytest tests/ -v                 → all pass, 1 expected skip
+[ ] 3. Update version in pyproject.toml (and constants.py's fallback) to X.Y.Z
+[ ] 4. python -m build                  → .whl + .tar.gz in dist/
+[ ] 5. Verify j2 templates inside the .whl (especially if one was just added)
+[ ] 6. twine upload --repository testpypi dist/*X.Y.Z*
+[ ] 7. Test standard install + --compress on Python files (no extra needed)
+[ ] 8. Test install with [compress-web] extra + --compress on .js files
+[ ] 9. Test a "modules" config end to end
+[ ] 10. twine upload dist/*X.Y.Z*       → Production PyPI
+[ ] 11. git commit + tag + push
 ```
+
+**Release gate, not optional**: run `code-assembler` on this repository's
+own source tree and `--rebuild` the result before publishing. Two real,
+non-synthetic bugs (a self-referential metadata match, and false
+truncation-warning positives) were only ever found this way — every
+synthetic test fixture in the suite missed both. See `ROADMAP.md`'s
+*Release gate* section.
 
 ---
 
@@ -208,7 +243,9 @@ git push origin main --tags
 | `--compress` does nothing on .js | Install `pip install "code-assembler-pro[compress-js]"` |
 | `ImportError: tree_sitter` | Run `pip install tree-sitter>=0.21` (core package required) |
 | tree-sitter API error | Ensure `tree-sitter>=0.21` — v0.20 has incompatible API |
+| `--since`/`--compress`/`--description` silently ignored with `--config` | Expected if the config has a `"modules"` key — CLI overrides are rejected outright in batch mode, not silently dropped; check for that error message |
 
 ---
 
-*Last updated: v4.5.2 — June 2026*
+*This guide is intentionally left without a "last updated" version stamp —
+see the note at the top on why hardcoding one here goes stale by design.*
