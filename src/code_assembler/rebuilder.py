@@ -10,6 +10,17 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+# Matches only the exact, static last line core.py appends when it
+# genuinely truncates a file (see process_file()'s "# ... [TRUNCATED] ..."
+# block), anchored to the end of the extracted content. A bare substring
+# check on "[TRUNCATED]" instead — matching anywhere in the content — is a
+# false-positive magnet: this very codebase's own files legitimately
+# contain that string (core.py defines it, rebuilder.py checks for it,
+# the test suite asserts on it) without being truncated at all. Anchoring
+# on the real marker's distinctive final line, as a true suffix, only
+# matches genuine truncation.
+_TRUNCATION_SUFFIX_RE = re.compile(r'# Only the first \d+ lines are shown for context\.\s*\Z')
+
 
 class CodebaseRebuilder:
     """Handles the reconstruction of files from a Markdown codebase."""
@@ -22,19 +33,38 @@ class CodebaseRebuilder:
         self.md_content: str = ""
 
     def _extract_metadata(self) -> bool:
-        """Extract the hidden JSON metadata from the Markdown file."""
+        """
+        Extract the hidden JSON metadata from the Markdown file.
+
+        Takes the LAST regex match in the document, not the first.
+        `core.py`'s assemble() always appends `metadata_block` after all
+        file content (`frontmatter + header + full_content +
+        metadata_block`), so the real block is structurally guaranteed
+        to be the last one — but it is not guaranteed to be the *only*
+        one. Any documentation file describing this very feature in
+        prose (a CHANGELOG entry, a README section) that writes out
+        `<!-- CODE_ASSEMBLER_METADATA ... -->` as a literal example is
+        enough to satisfy this pattern earlier in the file. Searching
+        for the first match instead of the last picks up that decoy,
+        captures whatever non-JSON text sits between it and the next
+        unrelated `-->` anywhere later in the document, fails to parse,
+        and reports "no metadata found" even though a perfectly valid
+        block exists at the real end of the file. Reproduced by running
+        code-assembler on its own source tree, where CHANGELOG.md
+        documents this exact mechanism.
+        """
         if not self.md_path.exists():
             return False
 
         self.md_content = self.md_path.read_text(encoding='utf-8')
         pattern = re.compile(r'<!-- CODE_ASSEMBLER_METADATA\s+(.*?)\s+-->', re.DOTALL)
-        match = pattern.search(self.md_content)
+        matches = list(pattern.finditer(self.md_content))
 
-        if not match:
+        if not matches:
             return False
 
         try:
-            self.metadata = json.loads(match.group(1))
+            self.metadata = json.loads(matches[-1].group(1))
             return True
         except json.JSONDecodeError:
             return False
@@ -185,8 +215,10 @@ class CodebaseRebuilder:
                 target_path.parent.mkdir(parents=True, exist_ok=True)
                 target_path.write_text(content, encoding='utf-8')
 
-                # Check for truncation warning
-                if "[TRUNCATED]" in content:
+                # Check for truncation warning — anchored suffix match,
+                # see _TRUNCATION_SUFFIX_RE for why a bare substring
+                # search is unsafe.
+                if _TRUNCATION_SUFFIX_RE.search(content):
                     errors.append(f"Warning: {rel_path} was truncated in the source MD.")
 
                 created_count += 1

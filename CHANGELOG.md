@@ -2,6 +2,33 @@
  
 ## [Unreleased]
 
+## [4.6.1] - 2026-08-23
+
+### Fixed
+
+- `rebuilder.py`: `_extract_metadata()` took the first regex match in
+  the document instead of the last. Since `core.py` always appends the
+  real metadata block after all file content, it is structurally
+  guaranteed to be the last match — but not the only one. Any file
+  documenting this exact feature in prose (e.g. a CHANGELOG entry
+  reading "Injects a hidden JSON block (`<!-- CODE_ASSEMBLER_METADATA
+  ... -->`)...") creates an earlier, non-JSON decoy that made rebuild
+  fail with "No valid metadata found" even though a valid block existed
+  at the true end of the file. Found by running code-assembler on its
+  own source tree.
+- `rebuilder.py`: the truncation-warning check used a bare substring
+  search (`"[TRUNCATED]" in content`), which false-positived on any file
+  whose own legitimate content mentions that string — `core.py` (defines
+  the marker), `rebuilder.py` and the test suite (reference it). Now
+  anchored on the real marker's exact final line
+  ("# Only the first N lines are shown for context.") as a true suffix.
+  Same root cause and same discovery path as the metadata fix above.
+
+Regression tests: `tests/test_metadata_last_match.py`,
+`tests/test_rebuild.py::TestRebuild::test_truncation_false_positive_on_legitimate_content`
+(and `test_truncation_warning` corrected to use the real marker format
+instead of an unrealistic hand-crafted one).
+
 ## [4.6.0] - 2026-08-22
 ### Changed
 

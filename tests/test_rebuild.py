@@ -106,8 +106,23 @@ class TestRebuild(unittest.TestCase):
         self.assertFalse(self.output_dir.exists())
 
     def test_truncation_warning(self):
-        """Test that the rebuilder detects and warns about truncated files."""
-        files = {"large.py": "part 1\n[TRUNCATED]\npart 2"}
+        """
+        Test that the rebuilder detects and warns about truncated files.
+        Uses the real marker format core.py's process_file() actually
+        produces (three lines, ending in "... lines are shown for
+        context."), not just the bare "[TRUNCATED]" substring — the
+        detection is anchored on that exact suffix, see
+        test_truncation_false_positive_on_legitimate_content below for
+        why a looser check is unsafe.
+        """
+        files = {
+            "large.py": (
+                "def f():\n    pass\n\n"
+                "# ... [TRUNCATED] ...\n"
+                "# Content truncated because > 10.0MB.\n"
+                "# Only the first 500 lines are shown for context."
+            )
+        }
         meta = {"large.py": "2026-02-17 10:00"}
         self._create_mock_md(files, meta)
 
@@ -116,6 +131,42 @@ class TestRebuild(unittest.TestCase):
 
         self.assertEqual(count, 1)
         self.assertTrue(any("truncated" in err.lower() for err in errors))
+
+    def test_truncation_false_positive_on_legitimate_content(self):
+        """
+        Regression: a file whose own real content legitimately mentions
+        "[TRUNCATED]" mid-file (e.g. code_assembler's own core.py, which
+        defines this exact marker, or its own test suite, which asserts
+        on it) must NOT be flagged as truncated. Only content that ends
+        with the genuine marker's distinctive last line should trigger
+        the warning. Reproduced by running code-assembler on its own
+        source tree, where core.py, rebuilder.py, and the test suite all
+        legitimately contain the string "[TRUNCATED]" without ever being
+        truncated themselves.
+        """
+        files = {
+            "core.py": (
+                "MARKER = '[TRUNCATED]'\n"
+                "def truncate(content):\n"
+                "    return content + '\\n# ... [TRUNCATED] ...'\n"
+                "\n"
+                "def other_function():\n"
+                "    return 42\n"
+            )
+        }
+        meta = {"core.py": "2026-02-17 10:00"}
+        self._create_mock_md(files, meta)
+
+        rebuilder = CodebaseRebuilder(str(self.md_file), str(self.output_dir))
+        count, errors = rebuilder.rebuild()
+
+        self.assertEqual(count, 1)
+        self.assertFalse(
+            any("truncated" in err.lower() for err in errors),
+            f"False positive: {errors}"
+        )
+        restored = (self.output_dir / "core.py").read_text()
+        self.assertIn("def other_function", restored)
 
     def test_missing_metadata(self):
         """Test behavior when the Markdown file has no metadata block."""
