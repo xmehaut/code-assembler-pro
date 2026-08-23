@@ -169,11 +169,28 @@ def main() -> None:
             if args.description:
                 cli_overrides["description"] = args.description
 
-            content = assemble_from_config(
+            result = assemble_from_config(
                 args.config,
                 since=args.since,
                 **cli_overrides,
             )
+
+            if isinstance(result, dict):
+                # Batch mode ("modules" in the config) — a summary, not a
+                # single content string. See core.assemble_modules().
+                if args.clip:
+                    print(f"{EMOJI['error']} --clip is not supported with a \"modules\" config.")
+                    sys.exit(1)
+                succeeded, failed = result["succeeded"], result["failed"]
+                for name, path in succeeded.items():
+                    print(f"  {EMOJI['success']} {name} -> {path}")
+                for name, err in failed.items():
+                    print(f"  {EMOJI['error']} {name}: {err}")
+                total = len(succeeded) + len(failed)
+                print(f"\n{EMOJI['rocket']} {len(succeeded)}/{total} module(s) assembled")
+                return
+
+            content = result
         else:
             if not args.paths or not args.extensions:
                 print(f"{EMOJI['error']} Error: Paths and extensions are required.")

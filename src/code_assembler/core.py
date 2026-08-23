@@ -8,7 +8,7 @@ and metadata injection.
 
 import os
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Dict
 
 from .analyzers import ArchitectureAnalyzer
 from .config import AssemblerConfig, FileEntry, CodebaseStats
@@ -286,17 +286,79 @@ def assemble_codebase(
     return content
 
 
+def assemble_modules(config_data: dict) -> Dict[str, Dict[str, str]]:
+    """
+    Batch-assemble every module declared under a "modules" key
+    (MODULES_SPEC.md §2-4, §9-10).
+
+    Single pass: `resolve_module_configs()` validates and resolves every
+    module's effective config up front — nothing is written until every
+    static error (bad root/module shape, missing extensions, a `/` in a
+    module name) has already been ruled out. Assembly itself then runs
+    per module; one module's runtime failure (bad path, permission error)
+    is recorded and does NOT abort the batch — the remaining modules
+    still get assembled, and the failure is reported back to the caller
+    (§10 partial-failure policy).
+
+    Returns a summary, not file content — there is no single string to
+    hand back for N output files:
+        {"succeeded": {module_name: output_path, ...},
+         "failed":    {module_name: error_message, ...}}
+    """
+    from .config import resolve_module_configs
+
+    resolved = resolve_module_configs(config_data)  # raises on any static error
+
+    succeeded: Dict[str, str] = {}
+    failed: Dict[str, str] = {}
+
+    for name, module_config in resolved.items():
+        module_config = dict(module_config)  # don't mutate the resolved dict
+        try:
+            paths = module_config.pop("paths")
+            # assemble_codebase() itself does not raise on a missing path —
+            # it silently walks nothing and produces a near-empty snapshot.
+            # That's tolerable for a single, deliberate invocation, but
+            # wrong for a batch: §10 explicitly names "bad path" as an
+            # expected per-module failure, so it must actually surface as
+            # one rather than silently succeed with 0 files.
+            missing = [p for p in paths if not Path(p).exists()]
+            if missing:
+                raise FileNotFoundError(f"path(s) not found: {', '.join(missing)}")
+            extensions = module_config.pop("extensions")
+            exclude_patterns = module_config.pop("exclude_patterns", None)
+            output = module_config.pop("output")
+            assemble_codebase(
+                paths=paths,
+                extensions=extensions,
+                exclude_patterns=exclude_patterns,
+                output=output,
+                **module_config,
+            )
+            succeeded[name] = output
+        except Exception as e:
+            failed[name] = str(e)
+
+    return {"succeeded": succeeded, "failed": failed}
+
+
 def assemble_from_config(
         config_file: str,
         since: Optional[str] = None,
         **cli_overrides
-) -> str:
+):
     """
     Assemble codebase using a JSON configuration file.
 
     CLI flags passed as keyword arguments take precedence over values
     in the JSON config file. This allows combining --config with flags
     like --compress without modifying the config file.
+
+    Returns the assembled Markdown content (str) for a normal, single-
+    output config. Returns a batch summary dict instead — see
+    `assemble_modules()` — when the config contains a top-level "modules"
+    key (MODULES_SPEC.md §2). Callers that need to tell the two apart
+    (e.g. the CLI) should check `isinstance(result, dict)`.
 
     Example:
         assemble_from_config("config.json", since="prev.md", compress=True)
@@ -310,6 +372,27 @@ def assemble_from_config(
         config_data['output'] = config_data.pop('output_file')
     elif 'output_file' in config_data:
         config_data.pop('output_file')
+
+    if "modules" in config_data:
+        # §11: delta mode is not meaningful across a batch of N independent
+        # snapshots — refuse explicitly rather than guessing which module
+        # --since was meant for.
+        if since is not None:
+            raise ValueError(
+                '--since is not supported with a "modules" config — run it '
+                'against a single module\'s own output file instead'
+            )
+        # Same reasoning for CLI overrides (--compress, --description, …):
+        # silently applying them to every module, or to none, would both be
+        # guesses. A module that wants --compress declares "compress": true
+        # itself (or inherits it from the config root, per §3).
+        if cli_overrides:
+            raise ValueError(
+                f'CLI overrides ({", ".join(cli_overrides)}) are not supported '
+                'with a "modules" config — set these keys in the JSON itself, '
+                'at the root or per module'
+            )
+        return assemble_modules(config_data)
 
     # CLI overrides win over JSON values — only apply truthy/explicit values
     # so that a bare --compress=False doesn't accidentally disable JSON compress:true

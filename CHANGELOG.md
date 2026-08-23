@@ -4,6 +4,23 @@
 
 ### Added
 
+- `modules` (JSON-only config key, MODULES_SPEC.md §2-4): assemble a
+  monorepo's sub-projects in a single pass, one output file per module.
+  Each module declares its own `paths`; every other root-level key
+  (`extensions`, `exclude_patterns`, `compress`, `description`, …) is
+  inherited by default and can be replaced (not merged) per module.
+  Output filenames are derived from the root `output`
+  (`codebase.md` → `codebase_api.md`), or set explicitly per module.
+  `--since` and CLI overrides (`--compress`, `--description`) are
+  explicitly rejected on a `modules` config rather than guessed at.
+- `config.resolve_module_configs()`: validates a whole `modules` block
+  before any file is written — unknown shape, missing `paths`, missing
+  `extensions`, or a module name containing a path separator all raise
+  immediately.
+- `core.assemble_modules()`: one bad module (bad path, permission
+  error) does not abort the batch — the rest still get built, and the
+  failure is reported in the returned summary.
+
 - New optional `description` field (spec: `MODULES_SPEC.md` §5), exposed
   via `--description` on the CLI and as a root-level `"description"` key
   in JSON configs. Pure passthrough into the frontmatter — no validation
@@ -21,6 +38,16 @@
 `MODULES_SPEC.md` — `modules`, `depends_on`, and `siblings` follow in
 subsequent steps.
 
+### Fixed
+
+- `assemble_codebase()` never raised on a path that doesn't exist —
+  it silently produced a near-empty snapshot. Harmless for a single,
+  deliberate call, but wrong for a `modules` batch, where a bad path
+  in one module must not look identical to success. `assemble_modules()`
+  now checks path existence explicitly before assembling each module.
+
+Second step of the multi-module feature (`MODULES_SPEC.md`). `depends_on`
+and `siblings` (frontmatter cross-references) are the remaining step.
 - **Fix**: `--description` broke `test_clipboard.py::test_cli_calls_clipboard`
   and, latently, three Namespace fixtures in `test_robustness.py` — all four
   construct `argparse.Namespace` by hand (mocking `parse_args`) rather than

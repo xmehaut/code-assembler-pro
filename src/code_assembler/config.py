@@ -6,7 +6,7 @@ This module defines all configuration dataclasses and validation logic.
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from .constants import DEFAULT_EXCLUDE_PATTERNS, DEFAULT_MAX_FILE_SIZE_MB
 
@@ -177,3 +177,79 @@ class CodebaseStats:
     def skip_file(self, path: str, reason: str = ""):
         entry = f"{path}" + (f" ({reason})" if reason else "")
         self.skipped_files.append(entry)
+
+
+def derive_module_output(root_output: str, module_name: str) -> str:
+    """
+    Derive a per-module output filename from the root "output" (MODULES_SPEC.md
+    §4): insert "_{module_name}" before the extension, defaulting to ".md" if
+    the root output has none, and preserving any directory component.
+
+        "codebase.md"            + "api" -> "codebase_api.md"
+        "codebase"                + "api" -> "codebase_api.md"
+        "snapshots/codebase.md"  + "api" -> "snapshots/codebase_api.md"
+    """
+    p = Path(root_output)
+    suffix = p.suffix if p.suffix else ".md"
+    new_name = f"{p.stem}_{module_name}{suffix}"
+    return str(p.parent / new_name) if str(p.parent) != "." else new_name
+
+
+def resolve_module_configs(config_data: dict) -> Dict[str, dict]:
+    """
+    Expand a "modules" block (MODULES_SPEC.md §2-4) into one fully-resolved
+    config dict per module, ready to pass as **kwargs to assemble_codebase().
+
+    Every static error is raised here, before any module is assembled —
+    the whole point of validating up front (§9, §10) is that a batch never
+    starts writing files only to fail midway on something that was already
+    knowable from the config alone (an unknown path or a genuinely broken
+    module can still fail later, at assembly time — that's a runtime
+    failure, handled per-module by the caller, not a config error).
+
+    Override semantics (§3): a module's own keys REPLACE the matching root
+    key entirely — no merging, no appending, one rule for every key.
+    """
+    if "paths" in config_data:
+        raise ValueError(
+            '"paths" and "modules" are mutually exclusive at the config root '
+            '— set "paths" inside each module instead (see MODULES_SPEC.md §2.1)'
+        )
+
+    modules = config_data.get("modules")
+    if not modules or not isinstance(modules, dict):
+        raise ValueError('"modules" must be a non-empty object of {name: config}')
+
+    # Every root key except the three with module-specific handling below
+    # becomes each module's default, per §3.
+    root_defaults = {
+        k: v for k, v in config_data.items()
+        if k not in ("modules", "paths", "output")
+    }
+    root_output = config_data.get("output", "codebase.md")
+
+    resolved: Dict[str, dict] = {}
+    for name, module_conf in modules.items():
+        if not isinstance(module_conf, dict):
+            raise ValueError(f'Module "{name}" must be a config object')
+        if "/" in name or "\\" in name:
+            raise ValueError(
+                f'Module name "{name}" must not contain a path separator '
+                '(flat module names only — see MODULES_SPEC.md §4/§8)'
+            )
+        if "paths" not in module_conf:
+            raise ValueError(f'Module "{name}" must define its own "paths"')
+
+        effective = dict(root_defaults)
+        effective.update(module_conf)  # module keys replace root keys, wholesale
+
+        if not effective.get("extensions"):
+            raise ValueError(
+                f'Module "{name}" has no "extensions" — set it at the module '
+                'level or at the config root'
+            )
+
+        effective.setdefault("output", derive_module_output(root_output, name))
+        resolved[name] = effective
+
+    return resolved
