@@ -220,11 +220,14 @@ def resolve_module_configs(config_data: dict) -> Dict[str, dict]:
     if not modules or not isinstance(modules, dict):
         raise ValueError('"modules" must be a non-empty object of {name: config}')
 
-    # Every root key except the three with module-specific handling below
-    # becomes each module's default, per §3.
+    # Every root key except the four with module-specific handling becomes
+    # each module's default, per §3. "depends_on" is deliberately excluded
+    # from inheritance too: a root-level depends_on would apply to every
+    # module including the one it names, producing an instant, confusing
+    # self-reference error for that module. §6 scopes it to per-module only.
     root_defaults = {
         k: v for k, v in config_data.items()
-        if k not in ("modules", "paths", "output")
+        if k not in ("modules", "paths", "output", "depends_on")
     }
     root_output = config_data.get("output", "codebase.md")
 
@@ -249,7 +252,24 @@ def resolve_module_configs(config_data: dict) -> Dict[str, dict]:
                 'level or at the config root'
             )
 
+        depends_on = effective.get("depends_on") or []
+        if not isinstance(depends_on, list):
+            raise ValueError(f'Module "{name}": "depends_on" must be a list of module names')
+        effective["depends_on"] = depends_on
+
         effective.setdefault("output", derive_module_output(root_output, name))
         resolved[name] = effective
+
+    # §6: every depends_on reference must resolve to another module in the
+    # same batch — checked only once every module name is known, so order
+    # inside the "modules" object never matters, and a self-reference is
+    # rejected explicitly rather than silently accepted as a trivial cycle.
+    module_names = set(resolved)
+    for name, effective in resolved.items():
+        for dep in effective["depends_on"]:
+            if dep == name:
+                raise ValueError(f'Module "{name}" cannot depend_on itself')
+            if dep not in module_names:
+                raise ValueError(f'Module "{name}" depends_on unknown module "{dep}"')
 
     return resolved

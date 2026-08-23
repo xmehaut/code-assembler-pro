@@ -7,6 +7,8 @@ and metadata injection.
 """
 
 import os
+import re
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Set, Dict
 
@@ -232,7 +234,10 @@ class CodebaseAssembler:
         # block starts and ends with its own "---" delimiters, and doing
         # the substitution first (on `header` alone) guarantees it can
         # never mistake the frontmatter's own "---" for the header's.
-        frontmatter = self.formatter.generate_frontmatter(self.stats, description=self.config.description)
+        frontmatter = self.formatter.generate_frontmatter(
+            self.stats.total_files, self.stats.estimated_tokens,
+            description=self.config.description,
+        )
 
         metadata_block = self.formatter.generate_metadata_block(self.toc_entries)
 
@@ -286,19 +291,57 @@ def assemble_codebase(
     return content
 
 
+def _read_frontmatter_int(content: str, field: str) -> int:
+    """
+    Extract a plain integer field (e.g. "files: 12") from a document's own
+    already-written frontmatter. Used by `assemble_modules()`'s phase 2 to
+    recover phase 1's already-computed total_files/estimated_tokens without
+    re-walking the module's directory or needing a live CodebaseStats
+    object. A small regex on a known, self-produced format rather than a
+    full YAML parse — this project has no runtime dependency on PyYAML
+    (only its own test suite does), and adding one just for two integers
+    that were already computed once is unwarranted.
+    """
+    match = re.search(rf'^{re.escape(field)}: (\d+)$', content, re.MULTILINE)
+    return int(match.group(1)) if match else 0
+
+
 def assemble_modules(config_data: dict) -> Dict[str, Dict[str, str]]:
     """
     Batch-assemble every module declared under a "modules" key
-    (MODULES_SPEC.md §2-4, §9-10).
+    (MODULES_SPEC.md §2-4, §6-7, §9-10).
 
-    Single pass: `resolve_module_configs()` validates and resolves every
-    module's effective config up front — nothing is written until every
-    static error (bad root/module shape, missing extensions, a `/` in a
-    module name) has already been ruled out. Assembly itself then runs
-    per module; one module's runtime failure (bad path, permission error)
-    is recorded and does NOT abort the batch — the remaining modules
-    still get assembled, and the failure is reported back to the caller
-    (§10 partial-failure policy).
+    Two phases, both required to satisfy §9's batch-consistency guarantee
+    ("every module's siblings and generated_at are computed from the same,
+    complete batch"):
+
+    Phase 1 assembles every module in turn via the normal, already-tested
+    `assemble_codebase()` — each is written to disk once, with an ordinary
+    single-module frontmatter that doesn't yet know about the rest of the
+    batch (no `module`/`depends_on`/`siblings`). One module's runtime
+    failure (bad path, permission error) is recorded and does NOT abort
+    the batch (§10) — this is the only phase where partial failure can
+    occur.
+
+    Phase 2 runs only after every module in phase 1 has been attempted, so
+    every *successful* module's name, output filename, description, and
+    token count are all known at once. For each successful module, its
+    frontmatter is regenerated — this time with `module`, `depends_on`,
+    and a `siblings` entry for every other successful module — and spliced
+    onto the front of the file already written in phase 1, replacing the
+    incomplete one. A single shared `generated_at`, computed once here,
+    is used for every module's regenerated frontmatter, rather than each
+    drifting by the few milliseconds between per-module writes.
+
+    A pragmatic implementation choice, not a literal reading of §9's step
+    ordering: rather than deferring every write until the whole batch is
+    known (which would need `assemble_codebase()` itself split into a
+    "compute" and a "write" phase — a deeper change to an engine already
+    validated through several rounds this session), each module is
+    written once in phase 1 and its frontmatter is corrected in phase 2.
+    From the caller's perspective the result is the same — no module is
+    left with stale sibling data once `assemble_modules()` returns — and
+    no already-tested single-module code path is touched to get there.
 
     Returns a summary, not file content — there is no single string to
     hand back for N output files:
@@ -306,12 +349,18 @@ def assemble_modules(config_data: dict) -> Dict[str, Dict[str, str]]:
          "failed":    {module_name: error_message, ...}}
     """
     from .config import resolve_module_configs
+    from .formatters import MarkdownFormatter
 
     resolved = resolve_module_configs(config_data)  # raises on any static error
 
     succeeded: Dict[str, str] = {}
     failed: Dict[str, str] = {}
+    # name -> {output, description, depends_on, tokens, total_files} for
+    # every module that made it through phase 1 — the raw material phase 2
+    # needs to build each other module's `siblings` entry.
+    batch_info: Dict[str, dict] = {}
 
+    # --- Phase 1: assemble every module -------------------------------
     for name, module_config in resolved.items():
         module_config = dict(module_config)  # don't mutate the resolved dict
         try:
@@ -328,6 +377,9 @@ def assemble_modules(config_data: dict) -> Dict[str, Dict[str, str]]:
             extensions = module_config.pop("extensions")
             exclude_patterns = module_config.pop("exclude_patterns", None)
             output = module_config.pop("output")
+            depends_on = module_config.pop("depends_on", [])
+            description = module_config.get("description")
+
             assemble_codebase(
                 paths=paths,
                 extensions=extensions,
@@ -335,9 +387,51 @@ def assemble_modules(config_data: dict) -> Dict[str, Dict[str, str]]:
                 output=output,
                 **module_config,
             )
+
+            written = Path(output).read_text(encoding='utf-8')
+            total_files = _read_frontmatter_int(written, "files")
+            estimated_tokens = _read_frontmatter_int(written, "tokens_estimate")
+
             succeeded[name] = output
+            batch_info[name] = {
+                "output": output,
+                "description": description,
+                "depends_on": depends_on,
+                "total_files": total_files,
+                "tokens": estimated_tokens,
+            }
         except Exception as e:
             failed[name] = str(e)
+
+    # --- Phase 2: patch every successful module's frontmatter ----------
+    # One shared timestamp for the whole batch (§9) — computed once, not
+    # per module, so every frontmatter written in this phase agrees.
+    batch_generated_at = datetime.now().isoformat(timespec="seconds")
+    formatter = MarkdownFormatter()
+    frontmatter_re = re.compile(r'\A---\n.*?\n---\n', re.DOTALL)
+
+    for name, info in batch_info.items():
+        siblings = [
+            {
+                "module": other,
+                "file": os.path.basename(other_info["output"]),
+                "description": other_info["description"],
+                "tokens": other_info["tokens"],
+            }
+            for other, other_info in batch_info.items() if other != name
+        ]
+        new_frontmatter = formatter.generate_frontmatter(
+            info["total_files"], info["tokens"],
+            description=info["description"],
+            module=name,
+            depends_on=info["depends_on"],
+            siblings=siblings,
+            generated_at=batch_generated_at,
+        )
+        output_path = Path(info["output"])
+        content = output_path.read_text(encoding='utf-8')
+        patched = frontmatter_re.sub(new_frontmatter, content, count=1)
+        output_path.write_text(patched, encoding='utf-8')
 
     return {"succeeded": succeeded, "failed": failed}
 

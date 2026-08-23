@@ -182,7 +182,16 @@ class MarkdownFormatter:
         }
         return self.render("main_header.md.j2", data)
 
-    def generate_frontmatter(self, stats: CodebaseStats, description: Optional[str] = None) -> str:
+    def generate_frontmatter(
+            self,
+            total_files: int,
+            estimated_tokens: int,
+            description: Optional[str] = None,
+            module: Optional[str] = None,
+            depends_on: Optional[List[str]] = None,
+            siblings: Optional[List[Dict[str, Any]]] = None,
+            generated_at: Optional[str] = None,
+    ) -> str:
         """
         Generate a small YAML frontmatter block for the very top of the
         document — loosely inspired by Google's Open Knowledge Format
@@ -198,27 +207,54 @@ class MarkdownFormatter:
         summary. Kept as a standalone block, added by the caller after
         the delta substitution has already run on the header alone.
 
-        Numeric fields are passed raw (not `format_number`-formatted,
-        which adds thousands separators) since this block is meant to be
-        machine-parsed as YAML, not read as prose.
+        Takes raw `total_files` / `estimated_tokens` ints rather than a
+        `CodebaseStats` instance: MODULES_SPEC.md §9 regenerates a
+        module's frontmatter a second time, once every module in a batch
+        is known, to fill in `siblings` — at that point there is no live
+        `CodebaseStats` object around any more, only the numbers already
+        written into the module's own first-pass frontmatter. Numeric
+        fields are rendered raw (no thousands separators) since this
+        block is meant to be machine-parsed as YAML, not read as prose.
 
-        `description` is free text supplied by the user (CLI or JSON
-        config) — it can legitimately contain quotes, colons, or
-        backslashes, any of which would produce invalid or silently
-        wrong YAML if just wrapped in manually-typed quotes. json.dumps()
-        produces a double-quoted scalar with proper escaping that is
-        valid in both JSON and YAML, so it's used here instead of
-        hand-rolled quoting. Omitted from the template context entirely
-        when not set, so the frontmatter of a run that doesn't use this
-        field is byte-for-byte identical to before this field existed —
-        never rendered as `description: null` or `description: ""`.
+        `description` is free text (CLI or JSON config); `json.dumps()`
+        produces a properly escaped double-quoted YAML scalar regardless
+        of quotes/backslashes/colons in the text, rather than hand-rolled
+        quoting. Omitted from the frontmatter entirely when not set — so
+        a run that doesn't use it produces byte-for-byte the same
+        frontmatter as before this field existed (§5, §12).
+
+        `module` / `depends_on` / `siblings` are only meaningful inside a
+        "modules" batch (§7) and are rendered only when `module` is set —
+        a normal, non-batch run's frontmatter is therefore also unaffected
+        by these params existing. Each `siblings` entry is a dict with
+        `module`, `file`, `description` (may be empty), `tokens`.
+
+        `generated_at` defaults to "now" if not given — but every module
+        in one batch must share a single, identical value (computed once
+        by the caller) rather than each drifting by the few milliseconds
+        between per-module regenerations, per §9's batch-consistency
+        guarantee.
         """
+        siblings_data = None
+        if siblings:
+            siblings_data = [
+                {
+                    "module": s["module"],
+                    "file": s["file"],
+                    "description_yaml": json.dumps(s.get("description") or ""),
+                    "tokens": s["tokens"],
+                }
+                for s in siblings
+            ]
         data = {
             "repo_url": REPO_URL,
-            "now_iso": datetime.now().isoformat(timespec="seconds"),
-            "total_files": stats.total_files,
-            "estimated_tokens": stats.estimated_tokens,
+            "now_iso": generated_at or datetime.now().isoformat(timespec="seconds"),
+            "total_files": total_files,
+            "estimated_tokens": estimated_tokens,
             "description_yaml": json.dumps(description) if description else None,
+            "module": module,
+            "depends_on": depends_on or [],
+            "siblings": siblings_data,
         }
         return self.render("components/frontmatter.md.j2", data)
 

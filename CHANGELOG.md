@@ -4,6 +4,22 @@
 
 ### Added
 
+- `depends_on` (per-module, JSON-only, MODULES_SPEC.md §6): a list of
+  other module names in the same `modules` block. Purely declarative —
+  echoed into the frontmatter, no import analysis. Validated at
+  config-parse time: an unknown module name or a module depending on
+  itself is a hard error before any file is written. Deliberately not
+  inheritable from the config root (a root-level `depends_on` would
+  apply to every module including the one it names).
+- `siblings` in the frontmatter (§7): every other module in the same
+  batch, with its file name, description, and token count — so an
+  agent can decide which sibling to open next without opening any of
+  them first. Every module in a batch shares one `generated_at`,
+  computed once, rather than drifting by the few milliseconds between
+  per-module writes.
+- `module` in the frontmatter: the current file's own module name,
+  present only in batch-mode output.
+
 - `modules` (JSON-only config key, MODULES_SPEC.md §2-4): assemble a
   monorepo's sub-projects in a single pass, one output file per module.
   Each module declares its own `paths`; every other root-level key
@@ -54,6 +70,16 @@ and `siblings` (frontmatter cross-references) are the remaining step.
   going through the real parser, so they don't automatically pick up new
   argparse defaults the way a real CLI invocation does. Added
   `description=None` to each.
+
+### Changed
+
+- `formatters.generate_frontmatter()` now takes `total_files` /
+  `estimated_tokens` as plain ints instead of a `CodebaseStats`
+  instance — internal signature change, no effect on generated output
+  for existing callers.
+
+This completes the multi-module monorepo feature described in
+`MODULES_SPEC.md` (all of §2-7 now implemented). Suggested version:
 
 ## [4.6.1] - 2026-08-23
 

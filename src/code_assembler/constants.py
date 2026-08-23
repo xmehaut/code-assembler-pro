@@ -12,7 +12,7 @@ try:
 
     __version__ = _get_version("code-assembler-pro")
 except Exception:
-    __version__ = "4.6.0"  # Fallback for dev mode without pip install
+    __version__ = "4.6.1"  # Fallback for dev mode without pip install
 
 # Canonical source repository, used in the frontmatter block (source_repo,
 # agents_doc) so an agent reading a generated snapshot can locate the

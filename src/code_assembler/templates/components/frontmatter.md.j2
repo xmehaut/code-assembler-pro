@@ -11,5 +11,17 @@ tokens_estimate: {{ estimated_tokens }}
 {% if description_yaml -%}
 description: {{ description_yaml }}
 {% endif -%}
+{% if module -%}
+module: {{ module }}
+depends_on: [{{ depends_on | join(', ') }}]
+{% if siblings -%}
+siblings:
+{% for s in siblings -%}
+  - { module: {{ s.module }}, file: {{ s.file }}, description: {{ s.description_yaml }}, tokens: {{ s.tokens }} }
+{% endfor -%}
+{% else -%}
+siblings: []
+{% endif -%}
+{% endif -%}
 ---
 

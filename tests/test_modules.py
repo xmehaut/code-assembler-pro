@@ -234,5 +234,227 @@ class TestAssembleModulesBatch(unittest.TestCase):
         self.assertIn("CLI overrides", str(ctx.exception))
 
 
+class TestDependsOnValidation(unittest.TestCase):
+    """§6: depends_on is declarative, validated at config-parse time."""
+
+    def test_depends_on_unknown_module_is_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            resolve_module_configs({
+                "extensions": [".py"],
+                "modules": {
+                    "api": {"paths": ["./api"], "depends_on": ["shaerd"]},
+                },
+            })
+        self.assertIn("unknown module", str(ctx.exception))
+
+    def test_depends_on_self_is_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            resolve_module_configs({
+                "extensions": [".py"],
+                "modules": {
+                    "api": {"paths": ["./api"], "depends_on": ["api"]},
+                },
+            })
+        self.assertIn("cannot depend_on itself", str(ctx.exception))
+
+    def test_depends_on_valid_reference_is_accepted(self):
+        resolved = resolve_module_configs({
+            "extensions": [".py"],
+            "modules": {
+                "shared": {"paths": ["./shared"]},
+                "api": {"paths": ["./api"], "depends_on": ["shared"]},
+            },
+        })
+        self.assertEqual(resolved["api"]["depends_on"], ["shared"])
+        self.assertEqual(resolved["shared"]["depends_on"], [])
+
+    def test_depends_on_order_in_modules_object_does_not_matter(self):
+        """A module may depend on one declared *after* it in the JSON —
+        validation only runs once every module name is known."""
+        resolved = resolve_module_configs({
+            "extensions": [".py"],
+            "modules": {
+                "api": {"paths": ["./api"], "depends_on": ["shared"]},
+                "shared": {"paths": ["./shared"]},
+            },
+        })
+        self.assertEqual(resolved["api"]["depends_on"], ["shared"])
+
+    def test_root_level_depends_on_is_not_inherited(self):
+        """A root "depends_on" would apply to every module including the
+        one it names — deliberately excluded from inheritance (§6)."""
+        resolved = resolve_module_configs({
+            "extensions": [".py"],
+            "depends_on": ["shared"],
+            "modules": {
+                "shared": {"paths": ["./shared"]},
+                "api": {"paths": ["./api"]},
+            },
+        })
+        self.assertEqual(resolved["shared"]["depends_on"], [])
+        self.assertEqual(resolved["api"]["depends_on"], [])
+
+
+class TestSiblingsFrontmatter(unittest.TestCase):
+    """§7: end-to-end, real files, real frontmatter."""
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.root = Path(self.test_dir)
+        self.previous_cwd = os.getcwd()
+        os.chdir(self.root)
+
+    def tearDown(self):
+        os.chdir(self.previous_cwd)
+        shutil.rmtree(self.test_dir)
+
+    def _frontmatter(self, path: str) -> dict:
+        import yaml
+        import re as _re
+        content = Path(path).read_text(encoding='utf-8')
+        m = _re.match(r'\A---\n(.*?)\n---\n', content, _re.DOTALL)
+        self.assertIsNotNone(m, f"No frontmatter found in {path}")
+        return yaml.safe_load(m.group(1))
+
+    def test_siblings_lists_every_other_module_never_itself(self):
+        (self.root / "api").mkdir()
+        (self.root / "api" / "main.py").write_text("print('api')", encoding='utf-8')
+        (self.root / "shared").mkdir()
+        (self.root / "shared" / "core.py").write_text("x = 1", encoding='utf-8')
+
+        result = assemble_modules({
+            "extensions": [".py"],
+            "output": "codebase.md",
+            "show_progress": False,
+            "modules": {
+                "api": {"paths": ["api"], "description": "REST API", "depends_on": ["shared"]},
+                "shared": {"paths": ["shared"], "description": "Shared utils"},
+            },
+        })
+        self.assertEqual(result["failed"], {})
+
+        api_fm = self._frontmatter("codebase_api.md")
+        self.assertEqual(api_fm["module"], "api")
+        self.assertEqual(api_fm["depends_on"], ["shared"])
+        self.assertEqual(len(api_fm["siblings"]), 1)
+        sibling = api_fm["siblings"][0]
+        self.assertEqual(sibling["module"], "shared")
+        self.assertEqual(sibling["file"], "codebase_shared.md")
+        self.assertEqual(sibling["description"], "Shared utils")
+        self.assertIsInstance(sibling["tokens"], int)
+
+        shared_fm = self._frontmatter("codebase_shared.md")
+        self.assertEqual(shared_fm["module"], "shared")
+        self.assertEqual(shared_fm["depends_on"], [])
+        self.assertEqual([s["module"] for s in shared_fm["siblings"]], ["api"])
+
+    def test_generated_at_is_identical_across_the_batch(self):
+        """§9: every frontmatter in the batch must share one generated_at,
+        not drift by the milliseconds between per-module regeneration."""
+        for mod in ("a", "b", "c"):
+            (self.root / mod).mkdir()
+            (self.root / mod / "f.py").write_text("x = 1", encoding='utf-8')
+
+        assemble_modules({
+            "extensions": [".py"],
+            "output": "codebase.md",
+            "show_progress": False,
+            "modules": {m: {"paths": [m]} for m in ("a", "b", "c")},
+        })
+
+        timestamps = {
+            self._frontmatter(f"codebase_{m}.md")["generated_at"] for m in ("a", "b", "c")
+        }
+        self.assertEqual(len(timestamps), 1, f"generated_at differs across the batch: {timestamps}")
+
+    def test_module_with_no_description_has_empty_string_in_sibling_entry(self):
+        (self.root / "api").mkdir()
+        (self.root / "api" / "main.py").write_text("print('api')", encoding='utf-8')
+        (self.root / "shared").mkdir()
+        (self.root / "shared" / "core.py").write_text("x = 1", encoding='utf-8')
+
+        assemble_modules({
+            "extensions": [".py"],
+            "output": "codebase.md",
+            "show_progress": False,
+            "modules": {
+                "api": {"paths": ["api"]},
+                "shared": {"paths": ["shared"]},  # no description
+            },
+        })
+
+        api_fm = self._frontmatter("codebase_api.md")
+        self.assertEqual(api_fm["siblings"][0]["description"], "")
+
+    def test_single_module_batch_has_empty_siblings_list(self):
+        (self.root / "solo").mkdir()
+        (self.root / "solo" / "f.py").write_text("x = 1", encoding='utf-8')
+
+        assemble_modules({
+            "extensions": [".py"],
+            "output": "codebase.md",
+            "show_progress": False,
+            "modules": {"solo": {"paths": ["solo"]}},
+        })
+
+        fm = self._frontmatter("codebase_solo.md")
+        self.assertEqual(fm["siblings"], [])
+
+    def test_body_content_is_unaffected_by_frontmatter_patching(self):
+        """Phase 2 replaces only the leading frontmatter block — the rest
+        of the file (table of contents, file content, hidden metadata)
+        must be byte-identical to what phase 1 wrote."""
+        (self.root / "api").mkdir()
+        (self.root / "api" / "main.py").write_text("def handler(): pass", encoding='utf-8')
+        (self.root / "shared").mkdir()
+        (self.root / "shared" / "core.py").write_text("x = 1", encoding='utf-8')
+
+        assemble_modules({
+            "extensions": [".py"],
+            "output": "codebase.md",
+            "show_progress": False,
+            "modules": {
+                "api": {"paths": ["api"]},
+                "shared": {"paths": ["shared"]},
+            },
+        })
+
+        content = (self.root / "codebase_api.md").read_text(encoding='utf-8')
+        self.assertIn("def handler(): pass", content)
+        self.assertIn("CODE_ASSEMBLER_METADATA", content)
+
+    def test_rebuild_still_works_on_a_batch_output_with_siblings(self):
+        """The patched frontmatter must not confuse the rebuild parser —
+        same guarantee already validated for plain frontmatter/description
+        in test_rebuild.py, re-checked here since the frontmatter is now
+        rewritten by a second, independent code path (phase 2's regex
+        splice) rather than generated once inline."""
+        from code_assembler.rebuilder import CodebaseRebuilder
+
+        (self.root / "api").mkdir()
+        (self.root / "api" / "main.py").write_text("print('hello')", encoding='utf-8')
+        (self.root / "shared").mkdir()
+        (self.root / "shared" / "core.py").write_text("x = 1", encoding='utf-8')
+
+        assemble_modules({
+            "extensions": [".py"],
+            "output": "codebase.md",
+            "show_progress": False,
+            "modules": {
+                "api": {"paths": ["api"], "depends_on": ["shared"]},
+                "shared": {"paths": ["shared"]},
+            },
+        })
+
+        rebuilder = CodebaseRebuilder("codebase_api.md", "restored")
+        count, errors = rebuilder.rebuild()
+        self.assertEqual(errors, [])
+        self.assertEqual(count, 1)
+        self.assertEqual(
+            (self.root / "restored" / "api" / "main.py").read_text(encoding='utf-8'),
+            "print('hello')"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
