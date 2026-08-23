@@ -232,7 +232,7 @@ class CodebaseAssembler:
         # block starts and ends with its own "---" delimiters, and doing
         # the substitution first (on `header` alone) guarantees it can
         # never mistake the frontmatter's own "---" for the header's.
-        frontmatter = self.formatter.generate_frontmatter(self.stats)
+        frontmatter = self.formatter.generate_frontmatter(self.stats, description=self.config.description)
 
         metadata_block = self.formatter.generate_metadata_block(self.toc_entries)
 

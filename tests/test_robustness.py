@@ -119,7 +119,8 @@ class TestCliShowExcludes(unittest.TestCase):
             use_default_excludes=True, max_size=10.0, since=None,
             clip=False, save_config=None, compress=False,
             compress_level="signatures",
-        )
+                description=None,
+    )
         with patch("code_assembler.cli.parse_args", return_value=args):
             with patch("sys.stdout", new=StringIO()):
                 # Must not raise
@@ -144,7 +145,8 @@ class TestCliRebuildErrorDisplay(unittest.TestCase):
             use_default_excludes=True, max_size=10.0, since=None,
             clip=False, save_config=None, compress=False,
             compress_level="signatures",
-        )
+                description=None,
+    )
 
         mock_rebuilder = MagicMock()
         mock_rebuilder.rebuild.return_value = (1, ["Content not found for: src/lost.py"])
@@ -171,7 +173,8 @@ class TestCliRebuildErrorDisplay(unittest.TestCase):
             use_default_excludes=True, max_size=10.0, since=None,
             clip=False, save_config=None, compress=False,
             compress_level="signatures",
-        )
+                description=None,
+    )
 
         mock_rebuilder = MagicMock()
         mock_rebuilder.rebuild.return_value = (5, [])

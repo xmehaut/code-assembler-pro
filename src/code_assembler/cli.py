@@ -102,6 +102,8 @@ def parse_args() -> argparse.Namespace:
                         help="Disable defaults")
     parser.add_argument("--max-size", type=float, default=DEFAULT_MAX_FILE_SIZE_MB, help="Max size in MB")
     parser.add_argument("--since", "-s", type=str, metavar="SNAPSHOT", help="Delta mode")
+    parser.add_argument("--description", type=str, default=None,
+                         help="Optional free-text description embedded in the frontmatter")
 
     parser.set_defaults(recursive=True, include_readmes=True, use_default_excludes=True)
     return parser.parse_args()
@@ -164,6 +166,8 @@ def main() -> None:
             if args.compress:
                 cli_overrides["compress"] = True
                 cli_overrides["compress_level"] = args.compress_level
+            if args.description:
+                cli_overrides["description"] = args.description
 
             content = assemble_from_config(
                 args.config,
@@ -190,6 +194,7 @@ def main() -> None:
                 since=args.since,
                 compress=args.compress,
                 compress_level=args.compress_level,
+                description=args.description,
             )
 
         if args.clip and content:

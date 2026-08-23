@@ -82,7 +82,8 @@ class TestClipboard(unittest.TestCase):
             max_size=10.0,
             since=None,
             compress=False,
-            compress_level="signatures"
+            compress_level="signatures",
+            description=None
         )
         mock_parse.return_value = args
 

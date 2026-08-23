@@ -209,6 +209,81 @@ class TestFrontmatter(unittest.TestCase):
         self.assertNotIn("No changes detected", frontmatter_text)
         self.assertIn("No changes detected", after_frontmatter)
 
+    def _get_frontmatter_dict(self, content: str) -> dict:
+        """Parse and return the frontmatter block as a dict, for assertions
+        on which keys are present — not just substring checks, which
+        wouldn't catch a stray `description: null` or `description: ""`."""
+        import yaml
+        match = re.match(r'\A---\n(.*?)\n---\n', content, re.DOTALL)
+        self.assertIsNotNone(match, "Frontmatter block not found")
+        return yaml.safe_load(match.group(1))
+
+    def test_description_via_cli_kwarg_lands_in_frontmatter(self):
+        """description=... passed to assemble_codebase() (the CLI's
+        --description ends up here) must appear verbatim in the
+        frontmatter, properly YAML-escaped."""
+        src_dir = self.root / "src"
+        src_dir.mkdir()
+        (src_dir / "main.py").write_text("print('hello')", encoding='utf-8')
+
+        output_file = self.root / "output.md"
+        assemble_codebase(
+            paths=[str(src_dir)], extensions=[".py"],
+            output=str(output_file), show_progress=False,
+            description='REST API — auth, "billing", webhooks',
+        )
+
+        fm = self._get_frontmatter_dict(output_file.read_text(encoding='utf-8'))
+        self.assertEqual(fm["description"], 'REST API — auth, "billing", webhooks')
+
+    def test_description_via_json_config_lands_in_frontmatter(self):
+        """A root-level "description" key in a JSON config (the
+        assemble_from_config() path) must also reach the frontmatter."""
+        src_dir = self.root / "src"
+        src_dir.mkdir()
+        (src_dir / "main.py").write_text("print('hello')", encoding='utf-8')
+
+        config_file = self.root / "config.json"
+        output_file = self.root / "output.md"
+        config_file.write_text(json.dumps({
+            "paths": [str(src_dir)],
+            "extensions": [".py"],
+            "output": str(output_file),
+            "show_progress": False,
+            "description": "Internal billing platform",
+        }), encoding='utf-8')
+
+        assemble_from_config(str(config_file))
+
+        fm = self._get_frontmatter_dict(output_file.read_text(encoding='utf-8'))
+        self.assertEqual(fm["description"], "Internal billing platform")
+
+    def test_no_description_keeps_frontmatter_at_4_6_x_shape(self):
+        """
+        Backward compatibility (spec §12): a run that sets no description
+        must produce a frontmatter with exactly the 4.6.x key set — no
+        `description` key at all, not `description: null` or `""`. This
+        is what guarantees the field is purely additive for anyone not
+        using it.
+        """
+        src_dir = self.root / "src"
+        src_dir.mkdir()
+        (src_dir / "main.py").write_text("print('hello')", encoding='utf-8')
+
+        output_file = self.root / "output.md"
+        assemble_codebase(
+            paths=[str(src_dir)], extensions=[".py"],
+            output=str(output_file), show_progress=False,
+        )
+
+        fm = self._get_frontmatter_dict(output_file.read_text(encoding='utf-8'))
+        self.assertNotIn("description", fm)
+        self.assertEqual(
+            set(fm.keys()),
+            {"type", "generator", "generator_version", "source_repo",
+             "agents_doc", "rebuild", "generated_at", "files", "tokens_estimate"}
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

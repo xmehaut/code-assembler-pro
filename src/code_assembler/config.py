@@ -32,6 +32,11 @@ class AssemblerConfig:
         compress_level: Compression depth — "signatures" keeps function/class
                         headers and docstrings; "docstrings_only" is reserved
                         for a future stricter mode.
+        description: Optional free-text description embedded in the
+                      frontmatter block. Omitted from the frontmatter entirely
+                      when None — never written as an empty/null field, so a
+                      run that doesn't set it produces the exact same
+                      frontmatter shape as before this field existed.
     """
 
     paths: List[str]
@@ -45,6 +50,7 @@ class AssemblerConfig:
     truncation_limit_lines: int = 500
     show_progress: bool = True
     use_default_excludes: bool = True
+    description: Optional[str] = None
 
     # Exact filenames to match (e.g. Dockerfile, Makefile, .env)
     exact_filenames: List[str] = field(default_factory=list)

@@ -1,6 +1,32 @@
 # Changelog
  
-## [Unreleased]
+## [4.7.0]
+
+### Added
+
+- New optional `description` field (spec: `MODULES_SPEC.md` §5), exposed
+  via `--description` on the CLI and as a root-level `"description"` key
+  in JSON configs. Pure passthrough into the frontmatter — no validation
+  or generation logic. Free-text content is escaped with `json.dumps()`
+  rather than hand-rolled quoting, since a description containing a
+  quote, colon, or backslash would otherwise produce invalid or silently
+  wrong YAML.
+- **Backward compatible by construction**: the field is omitted from the
+  frontmatter entirely when not set — never rendered as
+  `description: null` or `description: ""` — so a run that doesn't use
+  it produces byte-for-byte the same frontmatter as 4.6.x. Covered by
+  `tests/test_core.py::TestFrontmatter::test_no_description_keeps_frontmatter_at_4_6_x_shape`.
+
+- First step of the multi-module monorepo feature described in
+`MODULES_SPEC.md` — `modules`, `depends_on`, and `siblings` follow in
+subsequent steps.
+
+- **Fix**: `--description` broke `test_clipboard.py::test_cli_calls_clipboard`
+  and, latently, three Namespace fixtures in `test_robustness.py` — all four
+  construct `argparse.Namespace` by hand (mocking `parse_args`) rather than
+  going through the real parser, so they don't automatically pick up new
+  argparse defaults the way a real CLI invocation does. Added
+  `description=None` to each.
 
 ## [4.6.1] - 2026-08-23
 

@@ -8,5 +8,8 @@ rebuild: "pip install code-assembler-pro && code-assembler --rebuild <this-file>
 generated_at: "{{ now_iso }}"
 files: {{ total_files }}
 tokens_estimate: {{ estimated_tokens }}
+{% if description_yaml -%}
+description: {{ description_yaml }}
+{% endif -%}
 ---
 

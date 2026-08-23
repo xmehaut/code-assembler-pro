@@ -9,7 +9,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -182,7 +182,7 @@ class MarkdownFormatter:
         }
         return self.render("main_header.md.j2", data)
 
-    def generate_frontmatter(self, stats: CodebaseStats) -> str:
+    def generate_frontmatter(self, stats: CodebaseStats, description: Optional[str] = None) -> str:
         """
         Generate a small YAML frontmatter block for the very top of the
         document — loosely inspired by Google's Open Knowledge Format
@@ -201,12 +201,24 @@ class MarkdownFormatter:
         Numeric fields are passed raw (not `format_number`-formatted,
         which adds thousands separators) since this block is meant to be
         machine-parsed as YAML, not read as prose.
+
+        `description` is free text supplied by the user (CLI or JSON
+        config) — it can legitimately contain quotes, colons, or
+        backslashes, any of which would produce invalid or silently
+        wrong YAML if just wrapped in manually-typed quotes. json.dumps()
+        produces a double-quoted scalar with proper escaping that is
+        valid in both JSON and YAML, so it's used here instead of
+        hand-rolled quoting. Omitted from the template context entirely
+        when not set, so the frontmatter of a run that doesn't use this
+        field is byte-for-byte identical to before this field existed —
+        never rendered as `description: null` or `description: ""`.
         """
         data = {
             "repo_url": REPO_URL,
             "now_iso": datetime.now().isoformat(timespec="seconds"),
             "total_files": stats.total_files,
             "estimated_tokens": stats.estimated_tokens,
+            "description_yaml": json.dumps(description) if description else None,
         }
         return self.render("components/frontmatter.md.j2", data)
 
