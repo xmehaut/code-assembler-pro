@@ -214,7 +214,26 @@ class CodebaseAssembler:
                 if self._matches_file(Path(path)):
                     self.process_file(path)
             elif os.path.isdir(path):
-                self.process_directory(path)
+                # A top-level `paths` entry never got its own header before —
+                # only subdirectories *found inside* one did (see
+                # process_directory()'s `elif item.is_dir()` branch below).
+                # A directory like "src" that happens to contain exactly one
+                # subdirectory ("code_assembler") looked fine by accident,
+                # since that child's header appeared at the same depth a
+                # top-level header would have. But "examples" or "tests" —
+                # files directly inside, no subdirectory — produced no
+                # header at all: their files spilled into the flat top
+                # level of the TOC with no indication of origin. Two
+                # same-named files in different top-level paths (both
+                # projects' `__init__.py`, for instance) then showed up as
+                # visually identical TOC entries, even though the real
+                # metadata manifest and each file's own content header
+                # always kept the full, correct, distinguishing path.
+                if should_exclude(str(Path(path)), self.config.exclude_patterns):
+                    continue
+                self.content_buffer.append(self.formatter.format_directory_header(path, 0))
+                self.toc_entries.append(FileEntry(path=path, type='dir', depth=0))
+                self.process_directory(path, depth=1)
 
         full_content = "".join(self.content_buffer)
         self.stats.total_chars = len(full_content)

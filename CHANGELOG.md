@@ -1,7 +1,23 @@
 # Changelog
  
-## [4.7.0]
+## [4.7.1]
+### Fixed
 
+- Top-level entries in `paths` never got their own directory header in
+  the table of contents — only subdirectories *found inside* one did.
+  A path like `"src"` that happens to contain exactly one subdirectory
+  looked correct by accident (that child's header appeared at the
+  depth a top-level header would have). A path with files directly
+  inside and no subdirectory (`"examples"`, `"tests"`) produced no
+  header at all — its files spilled into the flat top level of the TOC,
+  and two same-named files from different top-level paths (e.g. both
+  projects' `__init__.py`) were visually indistinguishable, even though
+  the real metadata manifest and each file's own content header always
+  kept the correct, distinguishing full path — `--rebuild` was never
+  affected, only the TOC's readability. Found by inspecting this
+  release's own self-generated snapshot.
+
+## [4.7.0]
 ### Added
 
 - `depends_on` (per-module, JSON-only, MODULES_SPEC.md §6): a list of

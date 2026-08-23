@@ -26,6 +26,55 @@ class TestCore(unittest.TestCase):
         """Clean up the temporary directory after each test."""
         shutil.rmtree(self.test_dir)
 
+    def test_top_level_paths_get_their_own_directory_header(self):
+        """
+        Regression: a top-level entry in config.paths never got its own
+        directory header in the TOC — only subdirectories *found inside*
+        one did. A path like "src" that happens to contain exactly one
+        subdirectory ("code_assembler") looked fine by accident, since
+        that child's header appeared at the same depth a top-level header
+        would have. But a path with files directly inside and no
+        subdirectory (like "examples" or "tests") produced no header at
+        all — its files spilled into the flat top level of the TOC with
+        no indication of origin, and two same-named files in different
+        top-level paths (both projects' __init__.py, for instance) were
+        then visually indistinguishable in the TOC, even though the real
+        metadata manifest and each file's own content header always kept
+        the full, correct, distinguishing path.
+        """
+        (self.root / "examples").mkdir()
+        (self.root / "examples" / "__init__.py").write_text("x = 1", encoding='utf-8')
+        (self.root / "tests").mkdir()
+        (self.root / "tests" / "__init__.py").write_text("y = 2", encoding='utf-8')
+
+        output_file = self.root / "out.md"
+        content = assemble_codebase(
+            paths=[str(self.root / "examples"), str(self.root / "tests")],
+            extensions=[".py"],
+            output=str(output_file),
+            show_progress=False,
+        )
+
+        toc_match = re.search(r'## Table of Contents\n\n(.*?)\n\n\n---', content, re.DOTALL)
+        self.assertIsNotNone(toc_match, "TOC section not found")
+        toc = toc_match.group(1)
+
+        self.assertIn("`examples/`", toc)
+        self.assertIn("`tests/`", toc)
+        # Each __init__.py must appear nested under its own directory
+        # header, not as two indistinguishable flat top-level entries.
+        examples_idx = toc.index("`examples/`")
+        tests_idx = toc.index("`tests/`")
+        self.assertGreater(toc.count("__init__.py"), 0)
+        # The line immediately following each directory header must be
+        # that directory's own file, confirming real nesting rather than
+        # a flat pool of same-named files with no grouping at all.
+        lines = toc.split("\n")
+        examples_line = next(i for i, l in enumerate(lines) if "`examples/`" in l)
+        tests_line = next(i for i, l in enumerate(lines) if "`tests/`" in l)
+        self.assertIn("__init__.py", lines[examples_line + 1])
+        self.assertIn("__init__.py", lines[tests_line + 1])
+
     def test_smart_truncation(self):
         """Test if large files are correctly truncated based on configuration."""
         src_dir = self.root / "src"
